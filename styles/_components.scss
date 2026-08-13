@@ -243,3 +243,31 @@
   border: var(--hairline) solid var(--violet);
   text-transform: uppercase;
 }
+
+// ---------------------------------------------------------------- timeline
+.timeline { margin-block-start: 3rem; padding-inline: var(--gutter); }
+
+// Trailing slack so the final card clears the clip edge rather than ending
+// flush against it. Purely visual; the travel maths no longer depends on it.
+.timeline .rail::after {
+  content: '';
+  flex: 0 0 var(--gutter);
+}
+
+.timeline__card {
+  border-block-start: var(--rule) solid var(--line-strong);
+  padding-block-start: 1rem;
+  padding-inline-end: 1rem;
+}
+
+.timeline__year {
+  font-size: var(--fs-h3);
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__note {
+  margin-block-start: 0.6rem;
+  color: var(--ink-dim);
+  font-size: var(--fs-small);
+}

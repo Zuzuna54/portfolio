@@ -2,22 +2,29 @@
 
 // Start states for anything the scroll timeline drives.
 //
-// These live behind motion-safe so that when a visitor has reduced motion on,
-// the elements are never hidden in the first place — the reset then has nothing
-// to undo, and the page is a complete document with no JS required.
+// Gated on BOTH motion-safe and `html.motion-on`. The second gate matters more
+// than it looks: `motion-on` is set by a pre-paint inline script and cleared by
+// a watchdog if the motion bundle hasn't reported ready. So —
+//
+//   · JS disabled entirely  → class never set → nothing is ever hidden
+//   · bundle fails to load  → watchdog clears it → content appears
+//   · reduced motion        → class never set → complete static document
+//
+// Hiding content in CSS and relying on JS to reveal it is how a portfolio ends
+// up blank for exactly the people least equipped to work out why.
 @include mx.motion-safe {
-  [data-reveal] {
+  .motion-on [data-reveal] {
     opacity: 0;
     will-change: transform, opacity;
   }
-  [data-reveal='up']    { transform: translate3d(0, 2.5rem, 0); }
-  [data-reveal='left']  { transform: translate3d(-2.5rem, 0, 0); }
-  [data-reveal='right'] { transform: translate3d(2.5rem, 0, 0); }
-  [data-reveal='scale'] { transform: scale(0.94); }
+  .motion-on [data-reveal='up']    { transform: translate3d(0, 2.5rem, 0); }
+  .motion-on [data-reveal='left']  { transform: translate3d(-2.5rem, 0, 0); }
+  .motion-on [data-reveal='right'] { transform: translate3d(2.5rem, 0, 0); }
+  .motion-on [data-reveal='scale'] { transform: scale(0.94); }
 
   // SplitText writes these; hide the line boxes until the timeline runs.
-  [data-split] .line { overflow: hidden; }
-  [data-split] .line > * { will-change: transform; }
+  .motion-on [data-split] .line { overflow: hidden; }
+  .motion-on [data-split] .line > * { will-change: transform; }
 }
 
 // Pinned scroll scenes
@@ -112,4 +119,18 @@
   transform: scaleX(0);
   z-index: var(--z-header);
   @include mx.motion-reduce { display: none; }
+}
+
+// Horizontal rail — outer clips, inner translates under a pin.
+.rail-outer {
+  overflow: clip;
+  @include mx.motion-reduce { overflow: visible; }
+}
+
+// Reduced-motion escape hatch: if the provider bailed, make sure nothing is
+// left mid-transform by a class that got added before the check.
+.reduced-motion {
+  .progress, .cursor { display: none !important; }
+  .rail { transform: none !important; }
+  .scene { min-height: 0; }
 }

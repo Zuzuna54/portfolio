@@ -1,6 +1,20 @@
 import Link from "next/link";
 import { getWork, getWriting } from "@/lib/content";
 import { CONTACT, SUMMARY } from "@/lib/site";
+import SplitReveal from "@/components/motion/SplitReveal";
+import Reveal from "@/components/motion/Reveal";
+import MagneticLink from "@/components/motion/MagneticLink";
+import HorizontalRail from "@/components/motion/HorizontalRail";
+
+const TIMELINE: { year: string; what: string; note: string }[] = [
+  { year: "2017", what: "Biz2Credit", note: "Monolith to microservices. React and Redux frontends. The ordinary work that teaches you what breaks." },
+  { year: "2019", what: "StoreTasker", note: "A proxy layer for request capture, and leading the move to React and Node." },
+  { year: "2021", what: "Genentech", note: "ML platform tooling in biotech — a model-federation dashboard and the training topology as an interactive graph." },
+  { year: "2023", what: "Scale AI", note: "Prompt strategies and evaluation loops for LLM output quality." },
+  { year: "2024", what: "YellowPad", note: "Founding engineer at a legal-AI startup. Platform from zero, 2,000 users, SOC 2 Type 2." },
+  { year: "2025", what: "Agent platforms", note: "A ten-agent replayable pipeline, then a multi-tenant conversation-intelligence platform." },
+  { year: "2025", what: "Sunny Labs", note: "My own company. Custom hardware, four memory layers, a voice loop under half a second." },
+];
 
 export default function Home() {
   const work = getWork();
@@ -8,110 +22,143 @@ export default function Home() {
 
   return (
     <main id="main">
-      {/* Hero. The WebGL particle field and terminal boot mount over this in
-          phase 4 — the markup underneath stays server-rendered and readable so
-          LCP measures real content rather than an animation. */}
+      {/* The WebGL particle field mounts over this in phase 4. The markup
+          underneath stays server-rendered so LCP measures real content. */}
       <section className="hero section shell">
-        <p className="eyebrow">{CONTACT.location} · {CONTACT.remote}</p>
-        <h1 className="display hero__name">
-          Giorgi
-          <br />
-          Giorgobiani
-        </h1>
-        <p className="lead hero__lead">{SUMMARY}</p>
-        <p className="hero__sub">
-          Nine years of production engineering, the last several on LLM and agent platforms.
+        <p className="eyebrow">
+          {CONTACT.location} · {CONTACT.remote}
         </p>
-        <div className="cluster hero__cta">
-          <Link className="btn" href="/work">
-            See the work
-          </Link>
-          <a className="mono hero__link" href={CONTACT.github}>
-            GitHub
-          </a>
-          <a className="mono hero__link" href={CONTACT.linkedin}>
-            LinkedIn
-          </a>
-          <a className="mono hero__link" href="/resume">
-            Résumé
-          </a>
-        </div>
+        <SplitReveal as="h1" className="display hero__name">
+          Giorgi Giorgobiani
+        </SplitReveal>
+        <Reveal from="up" delay={0.1}>
+          <p className="lead hero__lead">{SUMMARY}</p>
+          <p className="hero__sub">
+            Nine years of production engineering, the last several on LLM and agent platforms.
+          </p>
+        </Reveal>
+        <Reveal from="up" delay={0.2}>
+          <div className="cluster hero__cta">
+            <MagneticLink>
+              <Link className="btn" href="/work">
+                See the work
+              </Link>
+            </MagneticLink>
+            <MagneticLink strength={8}>
+              <a className="mono hero__link" href={CONTACT.github}>GitHub</a>
+            </MagneticLink>
+            <MagneticLink strength={8}>
+              <a className="mono hero__link" href={CONTACT.linkedin}>LinkedIn</a>
+            </MagneticLink>
+            <MagneticLink strength={8}>
+              <Link className="mono hero__link" href="/resume">Résumé</Link>
+            </MagneticLink>
+          </div>
+        </Reveal>
       </section>
 
       <hr className="rule rule--accent" />
 
-      {/* Short-form case studies. Long-form lives on the detail pages. */}
       <section className="section shell">
         <p className="eyebrow">Selected work</p>
-        <h2 className="h1" style={{ marginBlockStart: "0.5rem" }}>
+        <SplitReveal as="h2" className="h1" scrub>
           Three systems
-        </h2>
+        </SplitReveal>
       </section>
 
       <section className="shell">
         <ul className="work-list" role="list">
-          {work.map((d) => (
+          {work.map((d, i) => (
             <li key={d.meta.slug}>
-              <Link href={`/work/${d.meta.slug}`} className="work-card">
-                <span className="work-card__meta mono">
-                  {d.meta.role} · {d.meta.period}
-                </span>
-                <span className="h2 work-card__title">{d.meta.title}</span>
-                <span className="work-card__kicker">{d.meta.summary}</span>
-                <span className="metrics work-card__metrics">
-                  {d.meta.metrics.map((m) => (
-                    <span className="metric" key={m.label}>
-                      <b>{m.value}</b>
-                      <span>{m.label}</span>
-                    </span>
-                  ))}
-                </span>
-                <span className="work-card__go mono">Read the teardown →</span>
-              </Link>
+              <Reveal from="up" delay={i * 0.05}>
+                <Link href={`/work/${d.meta.slug}`} className="work-card">
+                  <span className="work-card__meta mono">
+                    {d.meta.role} · {d.meta.period}
+                  </span>
+                  <span className="h2 work-card__title">{d.meta.title}</span>
+                  <span className="work-card__kicker">{d.meta.summary}</span>
+                  <span className="metrics work-card__metrics">
+                    {d.meta.metrics.map((m) => (
+                      <span className="metric" key={m.label}>
+                        <b>{m.value}</b>
+                        <span>{m.label}</span>
+                      </span>
+                    ))}
+                  </span>
+                  <span className="work-card__go mono">Read the teardown →</span>
+                </Link>
+              </Reveal>
             </li>
           ))}
         </ul>
       </section>
 
+      {/* Full-bleed palette inversion. Every colour is a custom property, so
+          the whole subtree follows — borders, links, diagrams included. */}
       <section className="section invert-crimson">
         <div className="shell">
           <p className="eyebrow">The through-line</p>
-          <h2 className="h1">
-            Systems you can
-            <br />
-            operate, not just demo
-          </h2>
-          <p className="lead" style={{ marginBlockStart: "1.5rem", maxWidth: "50ch" }}>
-            Is it replayable. Does the state machine have a path backwards. Is the scaling signal
-            honest, or merely available. Those questions are unglamorous, and they are the
-            difference between a system that survives production and one that only survives a
-            demo.
-          </p>
+          <SplitReveal as="h2" className="h1" scrub>
+            Systems you can operate, not just demo
+          </SplitReveal>
+          <Reveal from="up">
+            <p className="lead" style={{ marginBlockStart: "1.5rem", maxWidth: "50ch" }}>
+              Is it replayable. Does the state machine have a path backwards. Is the scaling signal
+              honest, or merely available. Those questions are unglamorous, and they are the
+              difference between a system that survives production and one that only survives a
+              demo.
+            </p>
+          </Reveal>
         </div>
+      </section>
+
+      <section className="section">
+        <div className="shell">
+          <p className="eyebrow">Nine years</p>
+          <SplitReveal as="h2" className="h1">
+            How I got here
+          </SplitReveal>
+        </div>
+        <HorizontalRail className="timeline">
+          {TIMELINE.map((t) => (
+            <article className="rail__item timeline__card" key={`${t.year}-${t.what}`}>
+              <p className="timeline__year mono">{t.year}</p>
+              <h3 className="h3">{t.what}</h3>
+              <p className="timeline__note">{t.note}</p>
+            </article>
+          ))}
+        </HorizontalRail>
       </section>
 
       <section className="section shell">
         <p className="eyebrow">Writing</p>
-        <h2 className="h1" style={{ marginBlockStart: "0.5rem" }}>
+        <SplitReveal as="h2" className="h1">
           Production teardowns
-        </h2>
+        </SplitReveal>
         <ul className="post-list" role="list" style={{ marginBlockStart: "2.5rem" }}>
           {latest.map((p) => (
             <li key={p.meta.slug}>
               <Link href={`/writing/${p.meta.slug}`} className="post-row">
-                <time className="mono post-row__date" dateTime={p.meta.date}>
-                  {new Date(p.meta.date).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </time>
+                <span className="post-row__date mono">
+                  <span className="post-row__n">{String(p.meta.n).padStart(2, "0")}</span>
+                  <time dateTime={p.meta.date}>
+                    {new Date(p.meta.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </time>
+                </span>
                 <span className="post-row__title h3">{p.meta.title}</span>
                 <span className="post-row__summary">{p.meta.summary}</span>
               </Link>
             </li>
           ))}
         </ul>
+        <p style={{ marginBlockStart: "2rem" }}>
+          <Link href="/writing" className="mono hero__link">
+            All 16 →
+          </Link>
+        </p>
       </section>
     </main>
   );

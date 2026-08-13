@@ -98,8 +98,25 @@ export default function SceneCanvas() {
     // matter so a single GC pause doesn't permanently downgrade a capable
     // machine, and it only ever steps down — oscillating between tiers is more
     // distracting than simply running at the lower one.
+    //
+    // It must never sample while the tab is hidden. Browsers throttle rAF to
+    // near zero there, which the watchdog reads as a slow GPU: switch tabs for
+    // two seconds, come back, and the quality has been stepped down — in
+    // testing it went high → mid → low → off and removed the scene entirely,
+    // permanently, for the rest of the session. The samples are discarded and
+    // the window restarted on the way back so the first frames after a return
+    // (which are always slow) aren't judged either.
+    //
+    // It also floors at "low". "off" means no WebGPU or reduced motion — a
+    // deliberate absence, never something a transient frame-rate dip can cause.
     let strikes = 0, frames = 0, lastSample = performance.now();
     const sampleFps = () => {
+      if (document.visibilityState !== "visible") {
+        frames = 0;
+        lastSample = performance.now();
+        strikes = 0;
+        return;
+      }
       frames++;
       const now = performance.now();
       if (now - lastSample < 1000) return;
@@ -110,6 +127,10 @@ export default function SceneCanvas() {
       strikes = bad ? strikes + 1 : 0;
       if (strikes < 2) return;
       strikes = 0;
+      // Floor at "low" — the watchdog degrades quality, it never removes the
+      // background. "off" means no WebGPU or reduced motion: a deliberate
+      // absence, never something a transient frame-rate dip can cause.
+      if (tierRef.current === "low") return;
       const next = tierBelow(tierRef.current);
       tierRef.current = next;
       el.dataset.tier = next;
@@ -217,7 +238,15 @@ export default function SceneCanvas() {
 
     // rAF is already throttled in a hidden tab, but being explicit means no
     // half-frame runs on the way out.
-    const onVisibility = () => { visible = document.visibilityState === "visible"; };
+    const onVisibility = () => {
+      visible = document.visibilityState === "visible";
+      // Restart the sampling window on return; the first frames back are always
+      // slow and must not count against the tier.
+      frames = 0;
+      lastSample = performance.now();
+      strikes = 0;
+      last = performance.now();
+    };
     document.addEventListener("visibilitychange", onVisibility);
 
     const onPointer = (e: PointerEvent) => {

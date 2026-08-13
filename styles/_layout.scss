@@ -216,3 +216,22 @@
   --invert-fg-dim: rgba(16, 13, 22, 0.75);
   --invert-line: rgba(16, 13, 22, 0.25);
 }
+
+// Content sits above the fixed WebGL layer.
+//
+// `.particles` is position:fixed with z-index 0. A positioned element paints
+// after non-positioned content in the same stacking context, so without this
+// the particle field renders ON TOP of every paragraph — legible-ish, but only
+// by accident. Giving the real content an explicit layer puts the field where
+// it belongs: behind, as atmosphere.
+//
+// z-index:-1 on the field would be the other fix and is wrong here, because
+// body carries an opaque background that would then cover it entirely.
+// NB: the header is deliberately absent from this list. It is already
+// position:sticky with its own z-index, and blanket-setting position:relative
+// here silently downgraded it to relative — the header simply scrolled away.
+main,
+.site-footer {
+  position: relative;
+  z-index: var(--z-content);
+}

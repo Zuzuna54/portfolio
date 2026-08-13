@@ -134,3 +134,67 @@
   .rail { transform: none !important; }
   .scene { min-height: 0; }
 }
+
+// ---------------------------------------------------------------- WebGL hero
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg);
+  pointer-events: none;
+  // Sits behind content but above the page ground. Content is opaque enough
+  // to stay legible over it; the shader's own alpha keeps it well under text.
+  opacity: 1;
+
+  canvas { display: block; width: 100% !important; height: 100% !important; }
+
+  @include mx.motion-reduce { display: none; }
+}
+
+// ---------------------------------------------------------------- boot
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--ground);
+  display: grid;
+  align-items: center;
+}
+
+.boot__inner {
+  display: grid;
+  gap: clamp(1.5rem, 5vh, 3rem);
+  position: relative;
+}
+
+.boot__count {
+  font-size: clamp(3.5rem, 14vw, 11rem);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  letter-spacing: -0.04em;
+
+  i { font-style: normal; font-size: 0.28em; color: var(--ink-faint); margin-inline-start: 0.2em; }
+}
+
+.boot__lines {
+  display: grid;
+  gap: 0.35rem;
+  font-size: var(--fs-small);
+  color: var(--ink-dim);
+
+  p { opacity: 0; }
+  p:last-child { color: var(--gold); }
+}
+
+.boot__skip {
+  position: absolute;
+  inset-block-end: -3rem;
+  inset-inline-start: 0;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-block-end: var(--hairline) solid currentColor;
+  padding-block-end: 2px;
+  &:hover { color: var(--gold); }
+}

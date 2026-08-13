@@ -31,10 +31,11 @@ export type WritingMeta = {
   slug: string;
   n: number;
   title: string;
+  /** The date this goes out on LinkedIn. The post is readable here regardless. */
   date: string;
   summary: string;
   diagram?: string;
-  status: "draft" | "published";
+  status: "scheduled" | "published";
 };
 
 export type Doc<T> = { meta: T; body: string };
@@ -65,12 +66,14 @@ export function getWorkBySlug(slug: string): Doc<WorkMeta> | undefined {
 }
 
 export function getWriting(): Doc<WritingMeta>[] {
+  // Ascending: this is a numbered series that builds, not a reverse-chronological
+  // feed. Post 1 sets up the idea post 3 pays off.
   return readDir("writing")
     .map(({ slug, raw }) => {
       const { data, content } = matter(raw);
       return { meta: { ...(data as Omit<WritingMeta, "slug">), slug }, body: content };
     })
-    .sort((a, b) => b.meta.n - a.meta.n);
+    .sort((a, b) => a.meta.n - b.meta.n);
 }
 
 export function getWritingBySlug(slug: string): Doc<WritingMeta> | undefined {

@@ -1,0 +1,27 @@
+---
+n: 9
+title: "3,072 dimensions vs 384: choosing embedding size by use case"
+date: "2026-09-15"
+status: scheduled
+summary: I used both, eight months apart, and the difference wasn't budget.
+---
+
+I've shipped retrieval on 3,072-dimension embeddings and on 384-dimension embeddings. The choice
+had nothing to do with what was affordable.
+
+The 3,072 system searched long-form conversation — transcript segments, summaries, and derived
+insights, indexed at three different granularities. Queries needed to separate genuinely close
+ideas: an objection about pricing from an objection about procurement. Fine distinctions across
+long text need the room.
+
+The 384 system clustered short chat messages into topics at a 70% similarity threshold. Chat
+messages are short and blunt. The distinctions that bigger vectors buy you don't exist at that
+granularity — you'd be paying storage and query time to resolve differences the source text never
+encoded.
+
+The heuristic I'd offer: dimension count should track *how much semantic nuance your source text
+actually contains*, not how important the feature is. Long, careful text rewards big vectors. Short,
+noisy text doesn't.
+
+Getting this wrong in the expensive direction is quiet. Everything works, the index is just several
+times larger and slower than it needed to be, and nobody profiles it because it isn't broken.

@@ -1,0 +1,25 @@
+---
+n: 12
+title: Autoscaling on backlog-per-task instead of CPU
+date: "2026-09-24"
+status: scheduled
+summary: Queue depth alone is the wrong signal and CPU is a lagging one. The honest unit is messages per worker.
+---
+
+Autoscaling a queue-driven system on CPU is scaling on a lagging indicator. By the time CPU rises,
+the backlog already grew; by the time it falls, you already over-provisioned.
+
+Autoscaling on raw queue depth is closer but still wrong. Fifty messages with ten workers is
+healthy. Fifty messages with one worker is an incident. Depth alone can't tell them apart.
+
+The honest unit is **backlog per task** — queue depth divided by running workers. We computed it
+every minute in a small function, published it as a custom metric, and target-tracked it at five
+messages per worker.
+
+The interesting bug is scaling from zero. Target tracking fires on *greater than*, so a service
+sitting at zero tasks with messages waiting computes a division by zero, or returns exactly the
+target and never breaches. We returned `max(messages, target) + 0.1` whenever tasks were zero and
+messages weren't — deliberately just over the line, so a sleeping service reliably wakes.
+
+That fraction is the least elegant line in the system and it is the one that makes scale-to-zero
+safe to run.

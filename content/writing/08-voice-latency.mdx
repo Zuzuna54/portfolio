@@ -1,0 +1,25 @@
+---
+n: 8
+title: Where the latency actually goes in a sub-500ms voice pipeline
+date: "2026-09-10"
+status: scheduled
+summary: Half a second is the line where people stop talking to a computer and start talking.
+---
+
+Under about half a second, people just talk. Over it, they start behaving like they're using a
+computer — over-enunciating, waiting, no longer interrupting. The number isn't arbitrary; it's the
+threshold where a system stops feeling conversational.
+
+Getting under it is not one optimization. It's refusing, at every stage, to wait for a complete
+result before starting the next one.
+
+Speech-to-text streams partial transcripts rather than returning at end-of-utterance. The model
+starts generating on the partial. Text-to-speech starts synthesizing on the first clause rather
+than the finished response. Audio starts playing on the first chunk.
+
+Nothing in that chain has a "done" step before the next stage begins. The end-to-end latency is
+roughly the slowest single hop plus the time to first token, not the sum of four complete stages.
+
+The part that surprised me is how much of the remaining budget is not inference. It's network
+round-trips, buffer sizes chosen for throughput rather than latency, and the audio driver on the
+device. We spent as long tuning buffers as tuning models.

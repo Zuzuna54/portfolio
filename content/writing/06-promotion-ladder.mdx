@@ -1,0 +1,27 @@
+---
+n: 6
+title: A promotion ladder that never demotes
+date: "2026-09-03"
+status: scheduled
+summary: Monotonicity turned a graph traversal into a threshold comparison, and made every downstream cache safe.
+---
+
+We extracted claims from conversations and needed to say how confident we were in each one.
+
+The model is a four-stage ladder — candidate, emerging, validated, decision-grade — with evidence
+thresholds between them: three pieces to reach emerging, five across two distinct conversations to
+reach validated, ten across three for decision-grade.
+
+The constraint that made it work: **signals never demote.** There is no path back down.
+
+That sounds like a limitation. It is the feature. It means a stage is a fact about evidence
+accumulated, not a value that can flap between runs as clustering shifts underneath it. Every
+downstream consumer — gating, tools, dashboards — can cache against a stage and trust it.
+
+It also collapsed a graph problem into arithmetic. Thirty-one artifact types were chained by
+prerequisite. If stages only ever increase, "are this artifact's prerequisites met" is a threshold
+comparison you can answer in two queries, not a recursive traversal.
+
+The thresholds are deliberately conservative, because a false positive misleads someone and a false
+negative just means something hasn't generated yet. Those costs aren't symmetric, so the thresholds
+aren't either.

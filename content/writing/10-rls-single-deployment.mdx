@@ -1,0 +1,25 @@
+---
+n: 10
+title: Multi-tenant isolation with Postgres RLS — why single-deployment won
+date: "2026-09-17"
+status: scheduled
+summary: Per-tenant deployments are easier to reason about and multiply every operation you'll ever perform.
+---
+
+Two ways to keep tenants apart: give each one their own deployment, or keep one deployment and
+enforce isolation in the database.
+
+Per-tenant deployment is easier to reason about. It is also a decision to multiply every future
+operation by your customer count. Every migration runs N times. Every deploy is N deploys. Every
+incident is N investigations, and they diverge, because they always diverge.
+
+We used Postgres row-level security in a single deployment. Isolation lives in one place, expressed
+as policies, and that place can be tested exhaustively — you can write a test that asserts tenant A
+cannot see tenant B's rows and run it on every commit. You cannot write that test against a fleet.
+
+The honest cost: RLS is unforgiving. A query path that bypasses the policy — a superuser connection,
+a background job with the wrong role, a raw query written in a hurry — silently sees everything. The
+protection is real but it is one mistake deep, and the mistake doesn't announce itself.
+
+So the isolation test isn't optional. It's the thing that makes the architecture safe rather than
+merely correct on the day it was written.

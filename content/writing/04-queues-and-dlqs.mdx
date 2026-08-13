@@ -1,0 +1,26 @@
+---
+n: 4
+title: "7 queues, 7 DLQs: what failure handling actually looks like"
+date: "2026-08-27"
+status: scheduled
+summary: One queue with a type field is simpler right up until one slow stage starves every other one.
+---
+
+The obvious design for a multi-stage LLM pipeline is one queue with a `type` field on the message.
+It is simpler, and it is wrong for the same reason a single thread pool is wrong.
+
+We ran seven queues, one per stage, each with its own dead-letter queue.
+
+The reason is that the stages have genuinely different shapes. Transcription is long and I/O-bound.
+Speaker identification is a cascade of cheap checks with one expensive vision call at the end.
+Video compilation is pure CPU. If they share a queue, they share a retry policy, a concurrency
+limit, and a scaling signal — and the slowest stage sets the pace for all of them.
+
+Separate queues mean a backed-up stage backs up alone.
+
+The dead-letter queues matter more than the queues. Bounded retries — three attempts, then the
+message moves to its DLQ with a fourteen-day retention — mean a poison message stops costing money
+within seconds instead of retrying until someone notices the bill.
+
+Seven DLQs also means "what is broken" is answerable by looking at which one has depth, rather
+than by grepping logs.

@@ -1,0 +1,24 @@
+---
+n: 5
+title: Exposing pipeline queries as MCP tools automatically
+date: "2026-09-01"
+status: scheduled
+summary: The integration you don't write is the one that can't drift.
+---
+
+Every data platform eventually grows an integration layer: something wants to ask it questions, so
+someone writes an endpoint. Then something else wants to ask, so someone writes another.
+
+On one platform I worked on, a pipeline declares its query operations as part of its definition —
+they are a field on the resource, not code in a service. The gateway reads those declarations and
+exposes each one as an MCP tool.
+
+Nobody writes the integration. Declare five query operations and an external LLM can call five
+tools, with the same authorization the pipeline already had.
+
+The property worth noticing is that the tool surface cannot drift from the pipeline, because it is
+generated from the same declaration that defines the pipeline. There is no second artifact to keep
+in sync, and no possibility of a tool that describes an operation the pipeline no longer performs.
+
+The cost is that your query operations have to be describable — named, typed, and meaningful
+without context. That is a constraint on how you design them, and it is a good one.

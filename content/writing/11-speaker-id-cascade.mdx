@@ -1,0 +1,27 @@
+---
+n: 11
+title: A 7-stage speaker-identification cascade
+date: "2026-09-22"
+status: scheduled
+summary: Order the checks by confidence, not by cleverness, and the expensive one runs almost never.
+---
+
+Given a call recording, work out who said what. Diarization gives you "speaker 1" and "speaker 2".
+Turning those into people is the actual problem.
+
+We ran seven stages, first match wins, ordered by confidence:
+
+Calendar attendees. Internal directory match. Vision analysis of sampled video frames. External
+search for people outside the organization. Manual assignment. Contextual inference from the
+conversation itself. Anonymous.
+
+The ordering is the design. The calendar knows who was invited and costs nothing to check. Vision
+analysis on video frames is accurate and expensive, so it sits behind two cheap checks that resolve
+most cases first. In practice the expensive stage runs on a small minority of speakers.
+
+Two details that mattered more than expected. The directory match requires name *and* company, not
+name alone — otherwise two people called John Smith at different companies collapse into one, and
+that error propagates into every downstream relationship. And every assignment records which stage
+produced it, so an operator can see why a name was chosen and re-curate.
+
+First match wins also makes it deterministic, which makes it replayable.

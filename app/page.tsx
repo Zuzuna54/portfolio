@@ -4,7 +4,7 @@ import { CONTACT, SUMMARY } from "@/lib/site";
 
 export default function Home() {
   const work = getWork();
-  const latest = getWriting().slice(0, 3);
+  const latest = getWriting().slice(0, 4);
 
   return (
     <main id="main">

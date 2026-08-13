@@ -1,0 +1,27 @@
+---
+n: 15
+title: What "production-ready" means for an agent system
+date: "2026-10-06"
+status: scheduled
+summary: Four questions. None of them are about the model.
+---
+
+"Production-ready" gets used for agent systems to mean "it worked in the demo". Four questions I'd
+actually ask:
+
+**Can you re-run it?** If a stage fails and you fix it, can you replay from source, or are you
+reasoning about which records got half-processed? Content-hash idempotency makes this a yes. Without
+it, every incident is archaeology.
+
+**Does any state machine have a path backwards?** Values that can move in both directions are values
+every downstream consumer has to defend against. Monotonic state is cacheable state.
+
+**Is the scaling signal honest or merely available?** CPU is available. On a queue-driven system,
+backlog per worker is honest. Most systems scale on what the platform hands them.
+
+**What happens to a poison message?** Bounded retries and a dead-letter queue mean a bad input costs
+seconds. Unbounded retries mean it costs money until someone notices.
+
+None of these are about model choice, prompt quality, or benchmark scores. They're the properties
+that decide whether you can operate the thing at 3am, and they're almost entirely absent from how
+agent systems get evaluated.

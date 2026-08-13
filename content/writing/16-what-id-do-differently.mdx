@@ -1,0 +1,28 @@
+---
+n: 16
+title: "Nine months of agent infrastructure: what I'd do differently"
+date: "2026-10-08"
+status: scheduled
+summary: Three things I got right for reasons I couldn't measure, and one I'd rebuild.
+---
+
+Looking back at a year of building agent platforms, the honest retrospective:
+
+**Thresholds I argued for instead of measuring.** The promotion ladder's evidence thresholds were
+chosen by judgment and defended as "conservative". Conservative in which direction, by how much,
+against what outcome? I never instrumented which signals actually influenced a decision. That's a
+week of work I skipped and would now do first.
+
+**Global constants that should have been per-tenant.** A 70% clustering threshold serves the middle
+of a distribution well and the tails poorly. Different communities have genuinely different topic
+density. Per-stream calibration was a day's work.
+
+**Building the expensive path first.** Reprocessing full conversation history is the right default
+and the wrong only option. Correct, and incomplete.
+
+What I'd keep without hesitation: fan out the reads and serialize the writes; make everything
+replayable before making anything fast; and pick the scaling signal that's honest rather than the
+one that's available.
+
+The pattern across all four regrets is the same. Every one is a place I made a defensible decision
+and then didn't build the measurement that would have told me whether it was right.

@@ -1,0 +1,26 @@
+---
+n: 14
+title: "Agent memory across sessions: reprocessing vs retention windows"
+date: "2026-10-01"
+status: scheduled
+summary: A sliding window doesn't fail loudly. It just quietly stops knowing you.
+---
+
+Every long-lived assistant faces the same decision: what does a new session know about the old ones?
+
+The standard answer is a retention window — keep the last N sessions, or the last N tokens, and
+summarize or drop the rest. It's cheap, it's bounded, and it works beautifully for about a month.
+
+Then the window slides past the thing you told it in week two. Nothing breaks. No error is logged.
+The assistant just gradually stops knowing you, and by the time anyone notices, there's no incident
+to point at.
+
+For a companion product I built the other way: every new session reprocesses the full history of
+prior sessions. No retention ceiling. Recall at month nine has the same shape as recall at week one.
+
+It is expensive, and the cost grows with history. That's why the memory is split into four layers by
+access pattern — short-term context, episodic facts, emotional state, and a relationship graph — so
+reprocessing walks what's relevant rather than everything ever stored.
+
+What I'd change: it should be tiered. Short exchanges shouldn't pay the full cost. I built the
+expensive path first because it proves the idea, but production wants both.

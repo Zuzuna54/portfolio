@@ -221,3 +221,25 @@
               border-color var(--dur-fast) var(--ease-out);
   &:hover { color: var(--gold); border-block-end-color: var(--gold); }
 }
+
+// Series number + scheduled date in the writing index.
+.post-row__date {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.post-row__n {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-row__pill {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  padding: 0.1rem 0.4rem;
+  color: var(--violet);
+  border: var(--hairline) solid var(--violet);
+  text-transform: uppercase;
+}

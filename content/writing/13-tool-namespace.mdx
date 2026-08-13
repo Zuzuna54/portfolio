@@ -1,0 +1,27 @@
+---
+n: 13
+title: "24 tools in one function-calling registry: organizing a namespace"
+date: "2026-09-29"
+status: scheduled
+summary: Past about a dozen tools, the model's problem stops being capability and starts being selection.
+---
+
+A function-calling assistant with a handful of tools is easy. At twenty-four, the failure mode
+changes: the model stops failing at *using* a tool and starts failing at *choosing* one.
+
+We organized ours into five categories — search, retrieval, list, detail, temporal — and the
+categories were as much for the model as for us. Tools that overlap in purpose need names and
+descriptions that make the difference obvious in one line, because one line is what the model reads.
+
+Two things helped more than anything else.
+
+Dispatching in parallel. Most useful questions need three or four lookups, and running them
+sequentially is the difference between two seconds and eight. Tool calls settle together rather than
+in series.
+
+And a max-tool-calls fallback. Without a ceiling, a model that has chosen badly will keep choosing —
+call, get an unhelpful result, call again. A bound turns an expensive loop into a degraded answer,
+which is strictly better.
+
+The lesson generalizes: past a dozen tools, tool descriptions are prompt engineering, not
+documentation. They are the only context the model has at the moment it decides.

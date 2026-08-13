@@ -141,9 +141,10 @@
   inset: 0;
   z-index: var(--z-bg);
   pointer-events: none;
-  // Sits behind content but above the page ground. Content is opaque enough
-  // to stay legible over it; the shader's own alpha keeps it well under text.
-  opacity: 1;
+  // Sits behind content but above the page ground. Content carries an explicit
+  // layer above this (see _layout.scss), and the shader's own alpha does most
+  // of the restraint — this is the last 15%.
+  opacity: 0.85;
 
   canvas { display: block; width: 100% !important; height: 100% !important; }
 

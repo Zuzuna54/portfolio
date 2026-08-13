@@ -7,7 +7,7 @@ import MagneticLink from "@/components/motion/MagneticLink";
 import HorizontalRail from "@/components/motion/HorizontalRail";
 import InvertScene from "@/components/motion/InvertScene";
 import PinnedScene from "@/components/motion/PinnedScene";
-import HeroScene from "@/components/webgl/HeroScene";
+import HeroDrivers from "@/components/webgl/HeroDrivers";
 
 const TIMELINE: { year: string; what: string; note: string }[] = [
   { year: "2017", what: "Biz2Credit", note: "Monolith to microservices. React and Redux frontends. The ordinary work that teaches you what breaks." },
@@ -25,10 +25,10 @@ export default function Home() {
 
   return (
     <main id="main">
-      {/* Particle field is fixed and behind everything; the boot overlay floats
-          above. The hero markup below is server-rendered either way, so LCP
-          measures real content rather than an animation. */}
-      <HeroScene />
+      {/* The particle field now lives in the root layout so it persists across
+          navigation. Only the boot overlay and the hero's scroll drivers are
+          page-local. */}
+      <HeroDrivers />
 
       <section className="hero section shell">
         <p className="eyebrow">

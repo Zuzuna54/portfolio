@@ -4,22 +4,16 @@ import { useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useMotion } from "@/components/motion/MotionProvider";
-import ParticleField from "./ParticleField";
 import HeroBoot from "./HeroBoot";
 
 /**
- * Drives the hero's WebGL formation from scroll.
+ * Home-page scroll drivers plus the boot overlay.
  *
- * Publishes two numbers on :root and nothing else:
- *   --hero-progress  0 → 1   scatter resolving into the architecture graph
- *   --hero-settle    0 → 1   graph relaxing into a drift field as you leave
- *
- * The shader reads them from computed style each frame. That indirection is
- * deliberate: WebGL, GSAP and CSS then share one scroll clock rather than three
- * subscriptions that can disagree, and the whole scene is scrubbed — scrolling
- * back genuinely reverses the formation instead of replaying it.
+ * The canvas itself is in the layout now; this only publishes the two values
+ * the hero formation reads. Keeping them page-local means other routes don't
+ * inherit a hero timeline that has no hero to attach to.
  */
-export default function HeroScene() {
+export default function HeroDrivers() {
   const { enabled } = useMotion();
 
   useEffect(() => {
@@ -27,8 +21,6 @@ export default function HeroScene() {
     gsap.registerPlugin(ScrollTrigger);
     const root = document.documentElement;
 
-    // Formation completes over the first viewport-and-a-bit, so the graph has
-    // resolved by the time the first case study arrives.
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: ".hero",
@@ -37,7 +29,6 @@ export default function HeroScene() {
         scrub: true,
         onUpdate: (self) => root.style.setProperty("--hero-progress", self.progress.toFixed(4)),
       });
-
       ScrollTrigger.create({
         trigger: ".hero",
         start: () => `top+=${window.innerHeight * 0.9} top`,
@@ -47,8 +38,7 @@ export default function HeroScene() {
       });
     });
 
-    // Seeded so the first frames read 0 rather than falling back to an
-    // unset property — the same class of flash fixed in PinnedScene.
+    // Seeded so the first frames read 0 rather than an unset property.
     root.style.setProperty("--hero-progress", "0");
     root.style.setProperty("--hero-settle", "0");
 
@@ -59,10 +49,5 @@ export default function HeroScene() {
     };
   }, [enabled]);
 
-  return (
-    <>
-      <ParticleField />
-      <HeroBoot />
-    </>
-  );
+  return <HeroBoot />;
 }

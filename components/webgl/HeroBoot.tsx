@@ -83,12 +83,23 @@ export default function HeroBoot() {
 
     tl.current = t;
 
+    // Hard safety net. The boot calls lenis.stop(), so if the timeline never
+    // completes — a backgrounded tab throttles rAF to zero, a GSAP failure,
+    // anything — scrolling stays locked forever and the site is unusable with
+    // no error to explain it. Observed exactly that while testing: isStopped
+    // true, boot still mounted, page frozen.
+    //
+    // Comfortably longer than the ~2.5s sequence, so it only ever fires when
+    // something has actually gone wrong.
+    const deadman = setTimeout(finish, 6000);
+
     // Any intent to interact ends it.
     const opts = { passive: true } as const;
     const events: (keyof WindowEventMap)[] = ["wheel", "touchstart", "keydown", "pointerdown"];
     events.forEach((e) => window.addEventListener(e, finish, opts));
 
     return () => {
+      clearTimeout(deadman);
       events.forEach((e) => window.removeEventListener(e, finish));
       t.kill();
       lenis?.start();

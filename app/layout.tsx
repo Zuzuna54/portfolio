@@ -5,6 +5,7 @@ import SiteFooter from "@/components/SiteFooter";
 import MotionProvider from "@/components/motion/MotionProvider";
 import Cursor from "@/components/motion/Cursor";
 import ScrollProgress from "@/components/motion/ScrollProgress";
+import SceneCanvas from "@/components/webgl/SceneCanvas";
 import RouteTransition from "@/components/motion/RouteTransition";
 import "@/styles/main.scss";
 
@@ -99,6 +100,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* MotionProvider is a client boundary, but `children` is passed through
             as a prop — so every page below stays a server component. */}
         <MotionProvider>
+          {/* Mounted once, never unmounted — the GPU context has to
+              survive navigation, and unmounting a canvas forces it to be
+              lost. Routes push scenes into it through the tunnel. */}
+          <SceneCanvas />
           <ScrollProgress />
           <Cursor />
           <SiteHeader />

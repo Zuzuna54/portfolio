@@ -1,0 +1,115 @@
+@use 'mixins' as mx;
+
+// Start states for anything the scroll timeline drives.
+//
+// These live behind motion-safe so that when a visitor has reduced motion on,
+// the elements are never hidden in the first place — the reset then has nothing
+// to undo, and the page is a complete document with no JS required.
+@include mx.motion-safe {
+  [data-reveal] {
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  [data-reveal='up']    { transform: translate3d(0, 2.5rem, 0); }
+  [data-reveal='left']  { transform: translate3d(-2.5rem, 0, 0); }
+  [data-reveal='right'] { transform: translate3d(2.5rem, 0, 0); }
+  [data-reveal='scale'] { transform: scale(0.94); }
+
+  // SplitText writes these; hide the line boxes until the timeline runs.
+  [data-split] .line { overflow: hidden; }
+  [data-split] .line > * { will-change: transform; }
+}
+
+// Pinned scroll scenes
+.scene {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+}
+
+.scene__pin {
+  position: relative;
+  overflow: clip;
+}
+
+// Horizontal segment — driven by ScrollTrigger, but degrades to a normal
+// swipeable overflow strip when the timeline isn't running.
+.rail {
+  display: flex;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  will-change: transform;
+
+  @include mx.motion-reduce {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-block-end: 1rem;
+    > * { scroll-snap-align: start; }
+  }
+}
+
+.rail__item { flex: 0 0 clamp(17rem, 30vw, 26rem); }
+
+// Custom cursor. Pointer-events off, and it only exists for fine pointers —
+// on touch there is no cursor to replace, and forcing one costs a paint per
+// frame for nothing.
+.cursor {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: var(--z-cursor);
+  pointer-events: none;
+  mix-blend-mode: difference;
+  will-change: transform;
+  display: none;
+
+  @media (pointer: fine) {
+    @include mx.motion-safe { display: block; }
+  }
+}
+
+.cursor__dot {
+  width: 8px; height: 8px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.cursor__ring {
+  position: absolute;
+  top: 0; left: 0;
+  width: 38px; height: 38px;
+  border: var(--rule) solid #fff;
+  transform: translate(-50%, -50%);
+  transition: width var(--dur) var(--ease-out),
+              height var(--dur) var(--ease-out),
+              opacity var(--dur) var(--ease-out);
+}
+
+.cursor.is-active .cursor__ring { width: 66px; height: 66px; }
+.cursor.is-hidden { opacity: 0; }
+
+// Hide the native cursor only when ours is actually rendering.
+@media (pointer: fine) {
+  @include mx.motion-safe {
+    html.has-custom-cursor,
+    html.has-custom-cursor * { cursor: none; }
+  }
+}
+
+// Magnetic elements translate toward the pointer; JS writes the offsets.
+.magnetic {
+  display: inline-block;
+  will-change: transform;
+}
+
+// Scroll progress indicator
+.progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--slab);
+  background: var(--gold);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  z-index: var(--z-header);
+  @include mx.motion-reduce { display: none; }
+}

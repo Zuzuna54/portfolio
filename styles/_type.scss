@@ -1,0 +1,110 @@
+@use 'functions' as fn;
+@use 'mixins' as mx;
+
+// One family, three voices. Recursive's MONO axis slides from proportional
+// sans to true monospace, so the terminal voice and the reading voice are the
+// same typeface at different axis positions — and we can animate between them.
+:root {
+  --fs-micro:   #{fn.fs('micro')};
+  --fs-small:   #{fn.fs('small')};
+  --fs-body:    #{fn.fs('body')};
+  --fs-lead:    #{fn.fs('lead')};
+  --fs-h3:      #{fn.fs('h3')};
+  --fs-h2:      #{fn.fs('h2')};
+  --fs-h1:      #{fn.fs('h1')};
+  --fs-display: #{fn.fs('display')};
+
+  // Live axis values. The scroll timeline writes to these, so type weight and
+  // the sans↔mono blend can be driven by scroll progress.
+  --axis-wght: 400;
+  --axis-mono: 0;
+  --axis-casl: 0;
+}
+
+.display,
+.h1, .h2, .h3 {
+  @include mx.recursive($wght: 800);
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.display {
+  font-size: var(--fs-display);
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+}
+
+.h1 { font-size: var(--fs-h1); }
+.h2 { font-size: var(--fs-h2); }
+.h3 {
+  font-size: var(--fs-h3);
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.lead {
+  font-size: var(--fs-lead);
+  line-height: 1.5;
+  color: var(--ink-dim);
+  max-width: 46ch;
+}
+
+// Eyebrows, labels, metrics, code — the machine voice.
+.mono {
+  @include mx.mono;
+  font-size: var(--fs-small);
+}
+
+.eyebrow {
+  @include mx.mono(600);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+}
+
+.prose {
+  max-width: 68ch;
+  font-size: var(--fs-body);
+
+  > * + * { margin-block-start: 1.15em; }
+
+  h2 {
+    @include mx.recursive($wght: 800);
+    font-size: var(--fs-h2);
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    margin-block-start: 2.4em;
+  }
+
+  h3 {
+    @include mx.recursive($wght: 700);
+    font-size: var(--fs-h3);
+    margin-block-start: 1.9em;
+  }
+
+  strong { @include mx.recursive($wght: 750); }
+
+  a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: var(--gold-dim);
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+    &:hover { text-decoration-color: currentColor; }
+  }
+
+  code {
+    @include mx.mono(500);
+    font-size: 0.9em;
+    background: var(--ground-3);
+    padding: 0.1em 0.35em;
+  }
+
+  blockquote {
+    border-inline-start: var(--slab) solid var(--crimson);
+    padding-inline-start: 1.25rem;
+    color: var(--ink-dim);
+  }
+}

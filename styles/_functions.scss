@@ -1,0 +1,37 @@
+@use 'sass:list';
+@use 'sass:map';
+@use 'sass:math';
+@use 'tokens';
+
+// Fluid clamp() between two rem sizes across the sm→xxl viewport range.
+// Returns a single clamp() so there are no breakpoint jumps in type size.
+@function fluid($min, $max, $min-vw: 22rem, $max-vw: 90rem) {
+  $slope: math.div($max - $min, $max-vw - $min-vw);
+  $intercept: $min - $slope * $min-vw;
+  @return clamp(#{$min}, #{$intercept} + #{$slope * 100vw}, #{$max});
+}
+
+// Look up a named step from the type scale and return its fluid clamp().
+// Named `fs`, not `type` — `type()` is reserved for the plain-CSS function.
+@function fs($name) {
+  $pair: map.get(tokens.$type-scale, $name);
+  @if $pair == null {
+    @error 'Unknown type step "#{$name}". Known: #{map.keys(tokens.$type-scale)}.';
+  }
+  // list.nth, not the global nth() — global built-ins are deprecated and go
+  // away in Dart Sass 3.
+  @return fluid(list.nth($pair, 1), list.nth($pair, 2));
+}
+
+// Spacing on a 4px base.
+@function step($n) {
+  @return calc(var(--step) * #{$n});
+}
+
+@function bp($name) {
+  $v: map.get(tokens.$breakpoints, $name);
+  @if $v == null {
+    @error 'Unknown breakpoint "#{$name}". Known: #{map.keys(tokens.$breakpoints)}.';
+  }
+  @return $v;
+}

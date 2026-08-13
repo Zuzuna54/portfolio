@@ -1,0 +1,96 @@
+@use 'tokens';
+@use 'mixins' as mx;
+
+*, *::before, *::after { box-sizing: border-box; }
+
+* { margin: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  // Lenis drives scrolling; native smooth would fight it. Under reduced motion
+  // Lenis is never started, so we hand smooth-scroll back to the browser.
+  scroll-behavior: auto;
+  @include mx.motion-reduce {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  min-height: 100svh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-recursive), ui-sans-serif, system-ui, sans-serif;
+  // Pin every axis explicitly. Recursive's default variable instance does not
+  // land on proportional sans, so relying on it renders all body copy in
+  // monospace. Setting the axes here makes the reading voice deliberate and
+  // gives .mono something to override.
+  @include mx.recursive($wght: 400, $mono: 0, $casl: 0);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+  transition: background-color var(--dur) var(--ease-out),
+              color var(--dur) var(--ease-out);
+}
+
+// Lenis sets this while it owns the scroll.
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+img, svg, video, canvas { display: block; max-width: 100%; }
+img, video { height: auto; }
+
+input, button, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  @include mx.focus-ring;
+}
+
+:where(button, [role='button'], summary) { @include mx.focus-ring; }
+
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.05; }
+p { text-wrap: pretty; }
+
+ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+// The scrubbed timeline positions elements by scroll progress. With motion
+// reduced we never build the timeline, so anything the JS would have revealed
+// must already be visible and untransformed.
+@include mx.motion-reduce {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-reveal], [data-scene], [data-split] {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+}
+
+.skip-link {
+  @include mx.visually-hidden;
+  &:focus-visible {
+    position: fixed;
+    inset: var(--gutter) auto auto var(--gutter);
+    z-index: var(--z-overlay);
+    width: auto; height: auto;
+    clip-path: none;
+    padding: 0.75rem 1.25rem;
+    background: var(--gold);
+    color: var(--ground);
+    font-weight: 700;
+  }
+}

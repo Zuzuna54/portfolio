@@ -1,0 +1,27 @@
+// Global entry. The only file imported by app/layout.tsx.
+//
+// Module order matters for cascade, not for resolution: @use loads each module
+// exactly once no matter how many files reference it, which is the whole reason
+// @import was deprecated.
+@use 'tokens';
+@use 'reset';
+@use 'type';
+@use 'layout';
+@use 'motion';
+
+// Theme resolution has three states, and all three have to be handled or the
+// toggle breaks in one direction:
+//   1. no attribute + no OS preference  → dark (our default)
+//   2. no attribute + OS says light     → light
+//   3. explicit data-theme              → wins over both
+:root {
+  @include tokens.palette-dark;
+  @include tokens.structure;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) { @include tokens.palette-light; }
+}
+
+:root[data-theme='light'] { @include tokens.palette-light; }
+:root[data-theme='dark']  { @include tokens.palette-dark; }

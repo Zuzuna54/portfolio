@@ -1,0 +1,71 @@
+@use 'functions' as fn;
+
+@mixin from($name) {
+  @media (min-width: #{fn.bp($name)}) { @content; }
+}
+
+@mixin until($name) {
+  @media (max-width: #{fn.bp($name) - 0.0625rem}) { @content; }
+}
+
+// The site's motion contract, in one place.
+//
+// Everything animated is wrapped in this. Under prefers-reduced-motion the page
+// must not merely animate less — it must be a complete, readable document, so
+// the fallback is "render the end state, skip the journey" rather than "fade in
+// slightly". A scroll-scrubbed page with motion half-disabled is worse than a
+// static one, because content pinned mid-timeline never arrives.
+@mixin motion-safe {
+  @media (prefers-reduced-motion: no-preference) { @content; }
+}
+
+@mixin motion-reduce {
+  @media (prefers-reduced-motion: reduce) { @content; }
+}
+
+@mixin shell($narrow: false) {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  // @if rather than the inline if() function — the latter is deprecated in
+  // current Dart Sass in favour of the CSS-native if().
+  @if $narrow {
+    max-width: var(--shell-narrow);
+  } @else {
+    max-width: var(--shell);
+  }
+}
+
+// Visible, high-contrast focus. Brutalist means a hard slab, not a soft glow.
+@mixin focus-ring($color: var(--gold)) {
+  &:focus-visible {
+    outline: var(--rule) solid #{$color};
+    outline-offset: 3px;
+  }
+}
+
+// Recursive's variable axes. MONO slides the family from proportional sans (0)
+// to true monospace (1), which lets one typeface carry both the reading voice
+// and the terminal voice — and lets us animate between them.
+@mixin recursive($wght: 400, $mono: 0, $casl: 0, $slnt: 0) {
+  font-variation-settings:
+    'MONO' #{$mono},
+    'CASL' #{$casl},
+    'wght' #{$wght},
+    'slnt' #{$slnt};
+}
+
+@mixin mono($wght: 500) {
+  @include recursive($wght: $wght, $mono: 1);
+  letter-spacing: 0.02em;
+}
+
+// Screen-reader-only, but still focusable (skip links).
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

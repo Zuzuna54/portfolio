@@ -1,0 +1,174 @@
+@use 'functions' as fn;
+@use 'mixins' as mx;
+
+.shell { @include mx.shell; }
+.shell--narrow { @include mx.shell($narrow: true); }
+
+// Brutalist scaffolding: the grid is visible, the rules are structural, and
+// nothing is rounded or softened.
+.rule {
+  border: 0;
+  border-block-start: var(--hairline) solid var(--line);
+}
+.rule--strong { border-block-start-width: var(--rule); border-color: var(--line-strong); }
+.rule--accent { border-block-start-width: var(--slab); border-color: var(--gold); }
+
+.section {
+  position: relative;
+  padding-block: clamp(4rem, 12vh, 9rem);
+}
+
+// Full-bleed palette inversion. Because every colour is a custom property,
+// a section can re-declare the whole palette and everything inside it —
+// including SVG diagrams and borders — follows automatically.
+.invert-crimson {
+  --ground: var(--crimson);
+  --ground-2: var(--crimson-hi);
+  --ink: #fff;
+  --ink-dim: rgba(255, 255, 255, 0.78);
+  --ink-faint: rgba(255, 255, 255, 0.55);
+  --line: rgba(255, 255, 255, 0.28);
+  --line-strong: rgba(255, 255, 255, 0.6);
+  --gold: #fff;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.invert-gold {
+  --ground: var(--gold);
+  --ink: #100d16;
+  --ink-dim: rgba(16, 13, 22, 0.75);
+  --ink-faint: rgba(16, 13, 22, 0.5);
+  --line: rgba(16, 13, 22, 0.25);
+  --line-strong: rgba(16, 13, 22, 0.55);
+  --gold: #100d16;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+// Layout primitives
+.stack > * + * { margin-block-start: var(--stack-gap, 1rem); }
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cluster-gap, 0.75rem);
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: var(--grid-gap, clamp(1.5rem, 4vw, 3rem));
+}
+
+.grid--2 { grid-template-columns: 1fr; @include mx.from('md') { grid-template-columns: repeat(2, 1fr); } }
+.grid--3 { grid-template-columns: 1fr; @include mx.from('md') { grid-template-columns: repeat(3, 1fr); } }
+
+// Editorial split used by the case studies: sticky label column, scrolling body.
+.split {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  grid-template-columns: 1fr;
+
+  @include mx.from('lg') {
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  }
+}
+
+.split__aside {
+  @include mx.from('lg') {
+    position: sticky;
+    top: calc(var(--header-h, 4rem) + 2rem);
+    align-self: start;
+  }
+}
+
+// Metric chips — the numbers that make the work land.
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-block-start: var(--hairline) solid var(--line);
+  border-inline-start: var(--hairline) solid var(--line);
+}
+
+.metric {
+  flex: 1 1 8rem;
+  padding: 0.85rem 1rem;
+  border-block-end: var(--hairline) solid var(--line);
+  border-inline-end: var(--hairline) solid var(--line);
+
+  b {
+    display: block;
+    @include mx.mono(700);
+    font-size: var(--fs-h3);
+    line-height: 1.1;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    display: block;
+    margin-block-start: 0.15rem;
+    font-size: var(--fs-micro);
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+}
+
+// Header
+.site-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-header);
+  background: color-mix(in oklab, var(--ground) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border-block-end: var(--hairline) solid var(--line);
+}
+
+.site-header__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--header-h, 4rem);
+}
+
+.brand {
+  @include mx.mono(700);
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.site-nav {
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.75rem);
+  align-items: center;
+}
+
+.site-nav a {
+  @include mx.mono(500);
+  font-size: var(--fs-small);
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: color var(--dur-fast) var(--ease-out);
+  &:hover { color: var(--gold); }
+}
+
+.theme-toggle {
+  @include mx.mono(600);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+  border: var(--hairline) solid var(--line);
+  padding: 0.4rem 0.7rem;
+  min-width: 4.5rem;
+  text-align: center;
+  transition: color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+  &:hover { color: var(--gold); border-color: var(--gold); }
+}

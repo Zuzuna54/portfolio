@@ -5,6 +5,8 @@ import SplitReveal from "@/components/motion/SplitReveal";
 import Reveal from "@/components/motion/Reveal";
 import MagneticLink from "@/components/motion/MagneticLink";
 import HorizontalRail from "@/components/motion/HorizontalRail";
+import InvertScene from "@/components/motion/InvertScene";
+import PinnedScene from "@/components/motion/PinnedScene";
 
 const TIMELINE: { year: string; what: string; note: string }[] = [
   { year: "2017", what: "Biz2Credit", note: "Monolith to microservices. React and Redux frontends. The ordinary work that teaches you what breaks." },
@@ -95,22 +97,33 @@ export default function Home() {
 
       {/* Full-bleed palette inversion. Every colour is a custom property, so
           the whole subtree follows — borders, links, diagrams included. */}
-      <section className="section invert-crimson">
-        <div className="shell">
-          <p className="eyebrow">The through-line</p>
-          <SplitReveal as="h2" className="h1" scrub>
-            Systems you can operate, not just demo
-          </SplitReveal>
-          <Reveal from="up">
-            <p className="lead" style={{ marginBlockStart: "1.5rem", maxWidth: "50ch" }}>
-              Is it replayable. Does the state machine have a path backwards. Is the scaling signal
-              honest, or merely available. Those questions are unglamorous, and they are the
-              difference between a system that survives production and one that only survives a
-              demo.
-            </p>
-          </Reveal>
-        </div>
-      </section>
+      <InvertScene palette="crimson">
+        {/* Pinned: the section holds while the three questions advance with
+            scroll progress. Each question is gated on --scene-progress, so
+            scrolling back genuinely un-reveals them. */}
+        <PinnedScene length={1.6} className="through">
+          <div className="shell">
+            <p className="eyebrow">The through-line</p>
+            <SplitReveal as="h2" className="h1">
+              Systems you can operate, not just demo
+            </SplitReveal>
+            <ol className="through__list" role="list">
+              <li style={{ "--at": 0.15 } as React.CSSProperties}>
+                Is it replayable?
+                <span>Or is every incident archaeology?</span>
+              </li>
+              <li style={{ "--at": 0.42 } as React.CSSProperties}>
+                Does the state machine have a path backwards?
+                <span>Monotonic state is cacheable state.</span>
+              </li>
+              <li style={{ "--at": 0.69 } as React.CSSProperties}>
+                Is the scaling signal honest, or merely available?
+                <span>CPU is available. Backlog per worker is honest.</span>
+              </li>
+            </ol>
+          </div>
+        </PinnedScene>
+      </InvertScene>
 
       <section className="section">
         <div className="shell">

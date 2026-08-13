@@ -271,3 +271,41 @@
   color: var(--ink-dim);
   font-size: var(--fs-small);
 }
+
+// ---------------------------------------------------------------- through-line
+// Each item declares the scene progress at which it lands (--at). The scene
+// publishes --scene-progress, so CSS alone decides visibility — one
+// ScrollTrigger drives the whole list instead of one per item.
+.through__list {
+  list-style: none;
+  padding: 0;
+  margin-block-start: clamp(2rem, 5vh, 3.5rem);
+  display: grid;
+  gap: clamp(1.25rem, 3vh, 2.25rem);
+  max-width: 34ch;
+
+  li {
+    font-size: var(--fs-h3);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    // step() would pop; a short window gives it a fade without a tween.
+    opacity: clamp(0, calc((var(--scene-progress, 1) - var(--at)) * 12), 1);
+    transform: translate3d(0, calc((1 - clamp(0, calc((var(--scene-progress, 1) - var(--at)) * 12), 1)) * 1.25rem), 0);
+    transition: none;
+
+    span {
+      display: block;
+      margin-block-start: 0.35rem;
+      font-size: var(--fs-small);
+      color: var(--ink-dim);
+    }
+  }
+}
+
+// Without the scene running there is no progress to read, so everything is
+// simply present.
+.reduced-motion .through__list li,
+html:not(.motion-on) .through__list li {
+  opacity: 1 !important;
+  transform: none !important;
+}

@@ -39,6 +39,15 @@ export default function PinnedScene({
     const el = ref.current;
     gsap.registerPlugin(ScrollTrigger);
 
+    // Seed the property immediately.
+    //
+    // The CSS fallback is `var(--scene-progress, 1)` — the end state — so that
+    // without JS every child is simply visible. But that fallback also applies
+    // in the window between mount and the trigger's first onUpdate, which made
+    // the whole sequence flash in fully revealed, hide itself, and then reveal
+    // again on scroll. Writing 0 up front closes that window.
+    el.style.setProperty(varName, "0");
+
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: el,

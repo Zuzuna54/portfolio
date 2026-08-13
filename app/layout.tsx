@@ -5,6 +5,7 @@ import SiteFooter from "@/components/SiteFooter";
 import MotionProvider from "@/components/motion/MotionProvider";
 import Cursor from "@/components/motion/Cursor";
 import ScrollProgress from "@/components/motion/ScrollProgress";
+import RouteTransition from "@/components/motion/RouteTransition";
 import "@/styles/main.scss";
 
 // One family, three voices. Recursive's MONO axis slides from proportional sans
@@ -101,7 +102,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ScrollProgress />
           <Cursor />
           <SiteHeader />
-          {children}
+          <RouteTransition>{children}</RouteTransition>
           <SiteFooter />
         </MotionProvider>
       </body>

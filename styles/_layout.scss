@@ -177,3 +177,42 @@
               border-color var(--dur-fast) var(--ease-out);
   &:hover { color: var(--gold); border-color: var(--gold); }
 }
+
+// Scroll-driven palette inversion.
+//
+// @property is what makes this possible: a plain custom property is a string,
+// so animating it would step 0 → 1 with no interpolation. Registering it as a
+// <number> lets the browser tween it on the compositor, and every token below
+// interpolates smoothly because they're all derived from that one value.
+@property --invert {
+  syntax: '<number>';
+  initial-value: 1;
+  inherits: true;
+}
+
+.invert-scene {
+  --invert: 1;   // end state by default: no JS, no motion → fully inverted
+  background: color-mix(in oklab, var(--invert-bg) calc(var(--invert) * 100%), var(--ground));
+  color: color-mix(in oklab, var(--invert-fg) calc(var(--invert) * 100%), var(--ink));
+
+  --ink:         color-mix(in oklab, var(--invert-fg) calc(var(--invert) * 100%), var(--ink));
+  --ink-dim:     color-mix(in oklab, var(--invert-fg-dim) calc(var(--invert) * 100%), var(--ink-dim));
+  --ink-faint:   color-mix(in oklab, var(--invert-fg-dim) calc(var(--invert) * 100%), var(--ink-faint));
+  --line:        color-mix(in oklab, var(--invert-line) calc(var(--invert) * 100%), var(--line));
+  --line-strong: color-mix(in oklab, var(--invert-fg) calc(var(--invert) * 100%), var(--line-strong));
+  --gold:        color-mix(in oklab, var(--invert-fg) calc(var(--invert) * 100%), var(--gold));
+}
+
+.invert-scene--crimson {
+  --invert-bg: var(--crimson);
+  --invert-fg: #fff;
+  --invert-fg-dim: rgba(255, 255, 255, 0.78);
+  --invert-line: rgba(255, 255, 255, 0.3);
+}
+
+.invert-scene--gold {
+  --invert-bg: var(--gold);
+  --invert-fg: #100d16;
+  --invert-fg-dim: rgba(16, 13, 22, 0.75);
+  --invert-line: rgba(16, 13, 22, 0.25);
+}

@@ -1,0 +1,108 @@
+---
+title: A ten-agent pipeline that can be replayed
+kicker: Fan out the reads, serialize the writes
+role: Senior Software Engineer
+period: 2025
+order: 2
+diagram: fanout
+encumbered: true
+problem: A firehose of chat events had to become a queryable social graph, without ten agents corrupting shared state on the way in.
+summary: >
+  A firehose of chat events needed to become a queryable social graph — users, messages, topics,
+  inferred relationships — without ten agents corrupting shared state on the way in. A
+  meta-orchestrator fans each batch out to seven stateless model-backed agents in parallel; three
+  coordination agents handle the rest, and a single writer merges every result into the graph.
+  Content-hash idempotency at the storage layer made the whole pipeline replayable: wipe Postgres
+  entirely, rebuild from source events, get the same graph. Retrieval runs on 384-dimension
+  embeddings with topic clustering at a 70% similarity threshold over a 27-table schema. Five
+  query operations are exposed as MCP tools, and pipelines themselves are declared as
+  infrastructure-as-code, so a new one ships as a stack file without recompiling any service.
+metrics:
+  - { value: "10", label: "agents per batch" }
+  - { value: "7 → 1", label: "parallel, single writer" }
+  - { value: "384", label: "dim embeddings" }
+  - { value: "70%", label: "cluster threshold" }
+  - { value: "27", label: "table schema" }
+  - { value: "5", label: "MCP query tools" }
+stack:
+  - TypeScript
+  - Kafka
+  - PostgreSQL + pgvector
+  - Redis
+  - CDKTF
+  - Terraform
+  - MCP
+---
+
+## The problem
+
+Chat events arriving continuously, needing to become a graph: who is talking, about what, how they
+relate, what they care about. Ten different analyses per batch, all wanting to write.
+
+The naive shape is to let each agent own its slice of state. It feels more autonomous, and it is
+how most agent systems get built. It also means every new agent multiplies the number of
+interleavings you have to reason about — and the failures show up as corrupted relationships at
+3am, not as a stack trace.
+
+## Fan out the reads, serialize the writes
+
+Seven model-backed agents — sentiment, embedding, toxicity, spam, emoji, topic, relationship —
+each make exactly one model call per batch and return a result. They are stateless. They touch
+nothing. Because they share no state, they parallelize perfectly, and adding an eighth costs
+nothing conceptually.
+
+Three coordination agents handle graph management, index management, and context building. One of
+them is the **only** writer. Every result merges through it.
+
+No locks. No partial merges. No ordering bugs. The pattern is old and it is the entire reason this
+system was debuggable.
+
+The in-memory graph is per-batch, not global — it captures one batch, gets persisted, and is
+discarded. That bounds memory and means a bad batch can't poison the next one.
+
+## Content-hash idempotency
+
+Every write is keyed by a hash of its source content. Re-running the pipeline over the same input
+produces byte-identical output.
+
+The consequence is bigger than it sounds: **Postgres became disposable.** We could wipe the
+database entirely and rebuild it from source events, deterministically. Debugging stopped being
+archaeology — instead of reasoning about which records got half-processed when stage six failed,
+you fix the bug and replay.
+
+The discipline it demands is being ruthless about what enters the hash. Anything non-deterministic
+— timestamps, model temperature, retry counts — has to stay out, or every run looks like a change
+and the property silently stops holding. That is the failure mode to watch: idempotency doesn't
+break loudly, it just quietly stops being true.
+
+In nine months of production, "just replay it" resolved more incidents than any dashboard did.
+
+## Retrieval and clustering
+
+384-dimension embeddings — an order of magnitude smaller than the 3,072 I used elsewhere, and
+deliberately so. That system needed to distinguish fine semantic shades across long-form
+transcripts. This one needed to cluster short chat messages into topics. Bigger vectors would have
+cost storage and query time to resolve distinctions that don't exist at this granularity.
+
+Topic assignment uses a 70% similarity threshold: above it, a message joins an existing cluster;
+below, it starts a new one. Backed by a 27-table schema with 49 indexes.
+
+## Pipelines as infrastructure
+
+The part I find most interesting architecturally. Pipelines are declared as
+infrastructure-as-code over custom resource types — a stream, an indexing-and-query primitive, an
+agent — rather than as application code.
+
+A new pipeline ships as a stack file. It deploys without recompiling any backend service. The
+platform's query gateway picks up the declared query operations automatically and exposes each as
+an MCP tool, so an external LLM can ask "what are people talking about in this group" and get a
+structured answer without anyone writing an endpoint.
+
+That is the payoff of treating a pipeline as a resource rather than a program: extending the
+system stops requiring a deploy of the system.
+
+## What I'd do differently
+
+The clustering threshold is a single global constant. Different communities have genuinely
+different topic densities, and 70% is a compromise that serves the middle of the distribution
+well and the tails poorly. Per-stream calibration would have been a day's work and I didn't do it.

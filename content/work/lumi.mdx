@@ -1,0 +1,105 @@
+---
+title: An AI companion that doesn't forget you
+kicker: Custom hardware, four memory layers, and a voice loop under half a second
+role: Founder & Principal Engineer
+period: 2025–present
+order: 3
+diagram: voice
+encumbered: false
+problem: A companion device has to remember you across months and answer fast enough to feel like conversation. Those two requirements pull against each other.
+summary: >
+  A companion device has two hard requirements that pull against each other: it has to remember
+  you across months, and it has to answer fast enough to feel like conversation rather than a
+  query. I built the platform end to end — custom ESP32-S3 hardware, the memory system, and a
+  multi-tenant cloud backend licensed to third-party brands as a white-label brain. Memory is four
+  layers across Redis, PostgreSQL and a graph store. The unusual choice is that every new session
+  reprocesses the full history of prior sessions rather than reading a fixed retention window, so
+  recall stays consistent at month nine the way it was at week one. The voice path is streaming
+  end to end and holds under 500ms. Hardware went from concept to first functional module in under
+  four weeks.
+metrics:
+  - { value: "<500ms", label: "voice loop" }
+  - { value: "4", label: "memory layers" }
+  - { value: "0", label: "retention ceiling" }
+  - { value: "ESP32-S3", label: "custom hardware" }
+  - { value: "RLS", label: "per-device isolation" }
+  - { value: "<4 wks", label: "concept → module" }
+stack:
+  - C/C++
+  - ESP32-S3
+  - TypeScript
+  - Redis
+  - PostgreSQL
+  - FalkorDB
+  - Streaming STT/TTS
+---
+
+## Two requirements in tension
+
+A companion has to remember you. Not "has your name in a system prompt" — actually remember, across
+months, the way a person does. And it has to answer fast enough that talking to it feels like
+talking, not like querying.
+
+Memory pushes toward more context. Latency pushes toward less. Almost every design decision here
+is somewhere on that line.
+
+This one is entirely my own company, so unlike the other two studies I can say whatever I like
+about it.
+
+## Four layers of memory
+
+Short-term context in Redis. Episodic facts in Postgres. Emotional state tracked separately. A
+long-term relationship graph in a graph store.
+
+They're split because they have different access patterns and different lifetimes, not because
+layering is tidy. Short-term context is read every turn and thrown away. Episodic facts are
+written rarely and read on recall. The relationship graph is traversed, not scanned — which is
+precisely what a graph store is good at and a relational store is not.
+
+## The choice I'd defend
+
+Every new session **reprocesses the full history of prior sessions**. There is no retention
+window and no ceiling.
+
+This is expensive and it is the whole product. The failure mode I was designing against is the one
+every long-lived assistant has: it works beautifully for a month, then the window slides, and it
+quietly starts forgetting the thing you told it in week two. Nobody notices the moment it happens.
+They just notice, eventually, that it doesn't know them anymore.
+
+A fixed window makes that certain. Reprocessing makes recall at month nine the same shape as
+recall at week one.
+
+The cost is real — session start is heavier, and it grows with history. That's the trade I took,
+and it's why the memory layers are split by access pattern: the reprocessing path only has to walk
+what's actually relevant, not everything ever stored.
+
+A separate subsystem of background agents reads conversation metadata and evolves the character
+configuration over time, so personality drifts with the relationship rather than being static
+across it.
+
+## Under 500ms
+
+Streaming end to end — streaming speech-to-text into the model into custom text-to-speech. Nothing
+waits for a complete result before starting the next stage.
+
+That number is the difference between conversation and transaction. Past roughly half a second,
+people start behaving like they're using a computer: they over-enunciate, they wait, they stop
+interrupting. Under it, they just talk.
+
+## Isolation and hardware
+
+The backend is licensed to third-party brands as a white-label platform, which makes per-device
+memory separation a hard requirement rather than a nice property. Postgres row-level security
+enforces it — one brand's devices can never reach another's, and that's true at the database
+rather than by convention in application code.
+
+On the hardware side: custom ESP32-S3, low-power, cloud-first, from concept to first functional
+module in under four weeks. Speed there came from deciding early that the device would be thin —
+capture, stream, play — and that everything interesting would live in the cloud.
+
+## What I'd do differently
+
+Reprocessing full history is the right default and the wrong *only* option. There should be a
+tier — a cheap path for short sessions that doesn't pay the full cost, escalating to full
+reprocessing when the conversation goes somewhere that needs it. I built the expensive path first
+because it's the one that proves the idea, but production wants both.

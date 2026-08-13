@@ -1,0 +1,24 @@
+---
+n: 1
+title: Content-hash idempotency — making an agent pipeline replayable
+date: "2026-08-18"
+status: draft
+diagram: fanout
+summary: Most LLM pipelines can't be re-run. One decision at the storage layer made ours fully replayable and turned Postgres into a disposable cache.
+---
+
+Most LLM pipelines can't be re-run. Something fails at stage 6, you fix it, and now you're
+reasoning about which records got half-processed.
+
+We made ours fully replayable with one decision: content-hash idempotency at the storage layer.
+Every write is keyed by a hash of its source content. Re-running the pipeline on the same input
+produces byte-identical output.
+
+The consequence is that Postgres became disposable. We could wipe the entire database and rebuild
+it from source events, deterministically. Debugging stopped being archaeology.
+
+The cost: you have to be disciplined about what goes into the hash. Anything non-deterministic —
+timestamps, model temperature, retry counts — has to stay out, or every run looks like a change.
+
+Worth it. In nine months of running this in production, "just replay it" resolved more incidents
+than any dashboard did.

@@ -1,0 +1,223 @@
+@use 'functions' as fn;
+@use 'mixins' as mx;
+
+// ---------------------------------------------------------------- buttons
+.btn {
+  @include mx.mono(700);
+  display: inline-block;
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.85rem 1.4rem;
+  color: var(--ground);
+  background: var(--gold);
+  border: var(--rule) solid var(--gold);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+
+  &:hover {
+    background: transparent;
+    color: var(--gold);
+  }
+}
+
+// A standing caveat, not an error — deliberately quieter than an alert.
+.note {
+  @include mx.mono(500);
+  margin-block-start: 2rem;
+  padding: 0.9rem 1.1rem;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-dim);
+  border-inline-start: var(--slab) solid var(--violet);
+  background: var(--violet-dim);
+  max-width: 62ch;
+}
+
+// ---------------------------------------------------------------- work
+.work-list {
+  list-style: none;
+  padding: 0;
+  border-block-start: var(--rule) solid var(--line-strong);
+}
+
+.work-card {
+  display: grid;
+  gap: 0.5rem;
+  padding-block: clamp(2rem, 5vw, 3.25rem);
+  border-block-end: var(--rule) solid var(--line-strong);
+  color: var(--ink);
+  transition: background-color var(--dur) var(--ease-out);
+
+  &:hover {
+    background: var(--ground-2);
+    .work-card__go { color: var(--gold); transform: translateX(0.35rem); }
+    .work-card__title { color: var(--gold); }
+  }
+}
+
+.work-card__meta { color: var(--ink-faint); font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.12em; }
+.work-card__title { transition: color var(--dur-fast) var(--ease-out); }
+.work-card__kicker { color: var(--ink-dim); max-width: 54ch; }
+.work-card__metrics { margin-block-start: 1rem; }
+.work-card__go {
+  margin-block-start: 0.75rem;
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+
+.stack-list {
+  margin-block-start: 0.75rem;
+  font-size: var(--fs-small);
+  color: var(--ink-dim);
+  line-height: 1.9;
+}
+
+// ---------------------------------------------------------------- repos
+.repo-grid { list-style: none; padding: 0; }
+
+.repo {
+  border-block-start: var(--hairline) solid var(--line);
+  padding-block-start: 1rem;
+
+  a { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+  &__name { font-size: var(--fs-h3); color: var(--ink); transition: color var(--dur-fast) var(--ease-out); }
+  a:hover &__name { color: var(--gold); }
+  &__lang { font-size: var(--fs-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; }
+  &__blurb { margin-block-start: 0.5rem; color: var(--ink-dim); font-size: var(--fs-small); }
+}
+
+// ---------------------------------------------------------------- writing
+.post-list { list-style: none; padding: 0; border-block-start: var(--hairline) solid var(--line); }
+
+.post-row {
+  display: grid;
+  gap: 0.35rem;
+  padding-block: 1.6rem;
+  border-block-end: var(--hairline) solid var(--line);
+  color: var(--ink);
+
+  @include mx.from('md') {
+    grid-template-columns: 9rem 1fr;
+    column-gap: 2rem;
+    align-items: baseline;
+  }
+
+  &:hover { .post-row__title { color: var(--gold); } }
+  &__date { color: var(--ink-faint); font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; }
+  &__title { transition: color var(--dur-fast) var(--ease-out); }
+  &__summary {
+    color: var(--ink-dim);
+    font-size: var(--fs-small);
+    max-width: 62ch;
+    @include mx.from('md') { grid-column: 2; }
+  }
+}
+
+// ---------------------------------------------------------------- résumé
+.resume-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.resume-role {
+  padding-block: 1.75rem;
+  border-block-end: var(--hairline) solid var(--line);
+
+  &__head { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: baseline; justify-content: space-between; }
+  &__meta { font-size: var(--fs-small); color: var(--ink-faint); }
+  &__bullets {
+    margin-block-start: 0.9rem;
+    padding-inline-start: 1.1rem;
+    display: grid;
+    gap: 0.5rem;
+    max-width: 74ch;
+    color: var(--ink-dim);
+    font-size: var(--fs-small);
+    li::marker { color: var(--gold); }
+  }
+}
+
+.skills {
+  margin-block-start: 1.5rem;
+  display: grid;
+  gap: 1.1rem;
+
+  dt {
+    font-size: var(--fs-micro);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+  }
+  dd { margin: 0.3rem 0 0; color: var(--ink-dim); font-size: var(--fs-small); max-width: 78ch; }
+
+  @include mx.from('md') {
+    > div { display: grid; grid-template-columns: 12rem 1fr; gap: 1.5rem; align-items: baseline; }
+    dd { margin-block-start: 0; }
+  }
+}
+
+// ---------------------------------------------------------------- footer
+.site-footer {
+  margin-block-start: clamp(3rem, 10vh, 7rem);
+  padding-block-end: 3rem;
+}
+
+.site-footer__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 3rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-block-start: 2.5rem;
+}
+
+.site-footer__loc { margin-block-start: 0.5rem; color: var(--ink-faint); font-size: var(--fs-small); }
+
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  a {
+    @include mx.mono(500);
+    font-size: var(--fs-small);
+    color: var(--ink-dim);
+    &:hover { color: var(--gold); }
+  }
+}
+
+.site-footer__fine {
+  margin-block-start: 2.5rem;
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+}
+
+// ---------------------------------------------------------------- hero
+.hero {
+  min-height: min(88svh, 54rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: clamp(3rem, 10vh, 7rem);
+}
+
+.hero__name { margin-block-start: 1rem; }
+.hero__lead { margin-block-start: clamp(1.5rem, 4vh, 2.5rem); max-width: 52ch; font-size: var(--fs-h3); line-height: 1.4; color: var(--ink); }
+.hero__sub { margin-block-start: 1rem; color: var(--ink-dim); max-width: 52ch; }
+.hero__cta { margin-block-start: clamp(2rem, 5vh, 3rem); --cluster-gap: 1.25rem; }
+
+.hero__link {
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+  border-block-end: var(--rule) solid transparent;
+  padding-block-end: 2px;
+  transition: color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+  &:hover { color: var(--gold); border-block-end-color: var(--gold); }
+}

@@ -8,6 +8,7 @@
 @use 'type';
 @use 'layout';
 @use 'motion';
+@use 'components';
 
 // Theme resolution has three states, and all three have to be handled or the
 // toggle breaks in one direction:

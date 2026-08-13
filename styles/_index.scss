@@ -1,0 +1,13 @@
+// Public API for the style system.
+//
+// Component stylesheets consume the design system through this one file:
+//
+//   @use '../../styles' as s;
+//   .thing { font-size: s.fs('h2'); @include s.from('md') { … } }
+//
+// It forwards *authoring tools only* — functions, mixins, and the token maps.
+// It deliberately emits no CSS, so a component can @use it without duplicating
+// rules. The global stylesheet (main.scss) is the only thing that emits.
+@forward 'tokens';
+@forward 'functions';
+@forward 'mixins';

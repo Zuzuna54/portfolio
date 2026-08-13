@@ -1,0 +1,26 @@
+---
+n: 2
+title: Cutting LLM pipeline compute ~94% — ECS on EC2 vs Fargate
+date: "2026-08-20"
+status: draft
+diagram: pipeline
+summary: It wasn't a clever model choice. It was noticing that one capacity strategy across three workload shapes means overpaying on at least two.
+---
+
+We cut the compute bill on an AI pipeline by about 94%. It wasn't a clever model choice. It was
+giving up on Fargate.
+
+Fargate is excellent until your workload shapes diverge. Ours had three: model-inference workers
+that wanted sustained CPU, a tiny ingestion service that idled most of the day, and FFmpeg jobs
+that were pure compute and didn't care about architecture.
+
+Paying Fargate's per-task premium across all three meant paying peak pricing for workloads that
+had nothing in common.
+
+We moved to ECS on EC2 with three capacity providers: compute-optimized instances for the AI
+workers, micro instances for ingestion, and ARM64 for FFmpeg. Autoscaling ran on queue backlog
+per task rather than CPU — queue depth is the honest signal for a queue-driven system; CPU lags it
+by minutes.
+
+The lesson isn't "Fargate is expensive." It's that one capacity strategy across three workload
+shapes means you're overpaying on at least two of them.

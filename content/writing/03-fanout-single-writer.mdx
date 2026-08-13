@@ -1,0 +1,25 @@
+---
+n: 3
+title: Fan-out reads, single-writer state
+date: "2026-08-25"
+status: draft
+diagram: fanout
+summary: Ten agents processing the same batch in parallel. The pattern that keeps them from corrupting shared state is older than any of this.
+---
+
+Ten agents processing the same batch in parallel. How do you stop them corrupting shared state?
+
+The answer we landed on is old: fan out reads, single-writer for state changes.
+
+Seven model-backed agents — sentiment, embedding, toxicity, spam, emoji, topic, relationship —
+each make exactly one model call per batch and return a result. They're stateless, so they
+parallelize perfectly. None of them touches the graph.
+
+One coordinator agent merges every result into the shared graph. Single writer. No locks, no
+partial merges, no ordering bugs at 3am.
+
+The instinct with agent systems is to let each agent own its slice of state. It feels more
+autonomous. It also means every new agent multiplies the number of interleavings you have to
+reason about.
+
+Autonomy in the reads. Serialization in the writes.

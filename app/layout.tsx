@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Recursive } from "next/font/google";
+import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import "@/styles/main.scss";
 
 // One family, three voices. Recursive's MONO axis slides from proportional sans
@@ -75,7 +77,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a className="skip-link" href="#main">
           Skip to content
         </a>
+        <SiteHeader />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

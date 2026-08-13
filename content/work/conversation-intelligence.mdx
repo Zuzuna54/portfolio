@@ -1,0 +1,130 @@
+---
+title: Multi-tenant conversation intelligence
+kicker: Turning 100 hours of calls a week into something you can query
+role: Senior Platform Engineer
+period: 2025–2026
+order: 1
+diagram: pipeline
+encumbered: true
+problem: Venture teams sat through roughly 120 calls a week. The knowledge in them was real and it evaporated.
+summary: >
+  Venture teams sat through roughly 120 calls a week — about 100 hours. I architected the platform
+  that turned that stream into structured, queryable business intelligence for several teams at
+  once. Recordings land in a nine-worker pipeline across seven queues, each with its own
+  dead-letter queue and bounded retries. Retrieval runs over 3,072-dimension embeddings in
+  pgvector; on top sits a chat assistant with a 24-tool function-calling registry and an MCP
+  server that exposes the intelligence layer to external agents. Tenants are isolated by Postgres
+  row-level security in a single deployment rather than one deployment per customer. Compute cost
+  fell about 94% when I moved off per-task serverless containers to three EC2 capacity providers
+  tuned per workload shape, autoscaled on queue backlog per task rather than CPU.
+metrics:
+  - { value: "100 hrs", label: "ingested weekly" }
+  - { value: "9", label: "workers" }
+  - { value: "7", label: "queues + DLQs" }
+  - { value: "3,072", label: "dim pgvector" }
+  - { value: "24", label: "assistant tools" }
+  - { value: "~94%", label: "compute cost cut" }
+stack:
+  - TypeScript
+  - Node.js
+  - AWS ECS on EC2
+  - SQS
+  - Lambda
+  - Pulumi
+  - PostgreSQL + pgvector
+  - Row-level security
+  - MCP
+---
+
+## The problem
+
+About 120 calls a week, roughly 100 hours of them. Every one contained something worth keeping —
+an objection that would recur, a pattern across portfolio companies, a decision and the reasoning
+behind it. All of it evaporated into recordings nobody rewatched.
+
+The ask was not "transcribe the calls." Transcripts are just longer recordings. The ask was to end
+up with something a person could *query* — and, later, something an agent could query.
+
+## The pipeline
+
+Nine workers across seven queues: transcription, speaker identification, summary, learning
+extraction, collage, reflection, and the supporting ingestion and reprocessing stages. Each queue
+has its own dead-letter queue with bounded retries, and a shared concurrent message-pool library
+is the reliability backbone underneath all nine.
+
+Queue-per-stage rather than one queue with a type field, because the stages have genuinely
+different shapes. Transcription is long and I/O-bound. Speaker identification is a cascade of
+cheap checks with an expensive vision call at the end. Collage is pure FFmpeg compute. Giving
+each its own queue means each gets its own retry policy, its own concurrency, and its own scaling
+signal — and one stage backing up never starves another.
+
+## The decision I'd defend hardest
+
+Extracted learnings climb a four-stage ladder — candidate, emerging, validated, decision-grade —
+promoted on evidence thresholds: three pieces to reach emerging, five across two distinct
+conversations to reach validated, ten across three to reach decision-grade.
+
+**Signals never demote.** There is no path back down the ladder.
+
+That constraint is the whole point. It means a signal's stage is a fact about evidence
+accumulated, not a value that can flap between runs as clustering shifts. Downstream consumers —
+artifact gating, the assistant's tools, the dashboards — can treat a stage as stable and cache
+against it. Without monotonicity, every consumer needs to handle a signal moving backwards, and
+in practice none of them would have.
+
+It also let 31 prerequisite-chained artifact types be evaluated in two database queries instead
+of recursive traversal: if stages only ever increase, "is this artifact's prerequisite met" is a
+threshold comparison, not a graph walk.
+
+The thresholds are deliberately conservative. A false positive in the artifact layer misleads a
+founder; a false negative just means an artifact hasn't generated yet. Those costs are not
+symmetric, so the thresholds aren't either.
+
+## Retrieval
+
+3,072-dimension embeddings in pgvector, spanning transcript segments, conversation summaries, and
+reflection insights — three different granularities in one index, so a query can match a passing
+remark or a whole-call theme.
+
+The clustering that feeds signal promotion is cosine similarity over the same index. Worth being
+honest about a rough edge: nearest-neighbour ties break on row order, so cluster membership can
+shift slightly between re-runs. That's tolerable precisely because the promotion thresholds are
+robust to small shifts — a signal sitting on exactly five pieces of evidence is rare, and one that
+does isn't load-bearing.
+
+## The surfaces
+
+Two, deliberately.
+
+A chat assistant with a 24-tool function-calling registry across five categories — search, RAG,
+list, detail, temporal — with thinking-token streaming and parallel tool dispatch over SSE. Tools
+run concurrently and settle together rather than serially, because most useful questions need
+three or four lookups and doing them in sequence is the difference between two seconds and eight.
+
+And an MCP server exposing the same intelligence layer to external agents. Same data, same
+authorization, no bespoke integration per consumer.
+
+## Isolation and cost
+
+Tenants are isolated with Postgres row-level security in a **single** deployment. The alternative —
+one deployment per customer — is easier to reason about and enormously more expensive to operate;
+every migration, every deploy, every incident multiplies by tenant count. RLS puts the isolation
+in one place that can be tested exhaustively.
+
+The cost work was the least clever and the most valuable. Per-task serverless containers are
+excellent until workload shapes diverge, and ours had three: model-inference workers wanting
+sustained CPU, a tiny ingestion service idling most of the day, and FFmpeg jobs that were pure
+compute and indifferent to architecture. Paying one premium across all three meant overpaying on
+at least two.
+
+Three EC2 capacity providers, each tuned to a shape, with autoscaling driven by **queue backlog
+per task** rather than CPU. Queue depth alone is the wrong signal — fifty messages with ten
+workers is fine, fifty with one is not — and CPU lags reality by minutes on a queue-driven system.
+Backlog-per-task is the honest unit. About 94% off the compute bill.
+
+## What I'd do differently
+
+The promotion thresholds were tuned by judgment and never A/B'd against outcomes. They're
+defensible and they're conservative, but "conservative" was an argument rather than a measurement.
+Given the time again, I'd instrument which signals actually influenced a decision and let that
+calibrate the ladder.

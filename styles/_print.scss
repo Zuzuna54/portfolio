@@ -1,0 +1,256 @@
+// Print — and the source of `public/resume.pdf`.
+//
+// `scripts/build-resume-pdf.sh` renders `/resume` through headless Chrome, so
+// these rules ARE the PDF. That is the point: the résumé data lives in exactly
+// one place (`app/resume/page.tsx`) and the downloadable file is generated from
+// it rather than maintained beside it.
+//
+// The PDF this replaced was built from a Word file in another folder. It drifted,
+// and by the time anyone checked it contradicted the site on six claims — three
+// memory tiers vs four, two datastores that were never in the stack, the wrong
+// latency figure, a retention model that was close to the opposite of the real
+// one, an isolation mechanism that does not exist in that architecture, and a
+// start date a month off. The same recruiter reads both documents.
+//
+// Ink on paper: the one place this site is not dark.
+
+@media print {
+  // ---------------------------------------------------------------- reset
+  //
+  // Blanket, and deliberately so. The screen design paints backgrounds on a
+  // dozen elements plus pseudo-element overlays, and the first version of this
+  // file chased them one selector at a time — it missed enough that the PDF came
+  // out with a black frame bleeding around every page. Resetting everything and
+  // then re-adding the two marks worth keeping is both shorter and correct.
+  //
+  // Text goes uniformly near-black. On screen the dim token carries hierarchy;
+  // at 300dpi on white it reads as washed-out grey, and a résumé that photocopies
+  // badly is a résumé that fails at the one job it has.
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    // Anything the motion layer may have left mid-tween. Print has no scroll
+    // events to finish the job, and a half-revealed résumé is the same failure
+    // as a blank one (HANDOFF §5.12).
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    animation: none !important;
+    transition: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  html,
+  body {
+    // `print-color-adjust: exact` matters here. Chrome does not paint background
+    // colours into a PDF by default, so a page whose ground is dark comes out
+    // with the *element* backgrounds dropped but the propagated canvas still
+    // dark — a black frame around white content. Forcing exact makes the white
+    // real rather than assumed.
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    font-size: 10.5pt;
+    line-height: 1.4;
+  }
+
+  // The page inset lives here rather than on @page — see the note above.
+  body {
+    padding: 12mm 14mm !important;
+    box-sizing: border-box !important;
+  }
+
+  // Nothing may be wider than the page. The measure caps that give the screen
+  // layout a comfortable line length (74ch on bullets, 78ch on skills) become a
+  // narrow column against a full-width right-aligned meta line, and
+  // `white-space: nowrap` on that meta pushed it clean off the right edge.
+  * {
+    max-width: 100% !important;
+  }
+
+  .resume-role__bullets,
+  .skills dd,
+  .prose {
+    max-width: none !important;
+  }
+
+  .resume-role__meta {
+    white-space: normal !important;
+  }
+
+  // Selectors verified against the real markup, not guessed: `.particles` is the
+  // canvas host, `.progress` the scroll bar, `.terminal-flare` the Konami
+  // payoff. `.btn` is "Download PDF" — offering the reader a download of the
+  // document they are already holding.
+  canvas,
+  .particles,
+  .site-header,
+  .site-footer,
+  .cursor,
+  .progress,
+  .drawline,
+  .terminal,
+  .terminal-flare,
+  .terminal__key,
+  .btn,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  // ------------------------------------------------------------ page setup
+  //
+  // Margin zero, padding on `body` — not the obvious `@page { margin: 14mm }`.
+  //
+  // The page *margin box* is painted from the propagated canvas background, and
+  // on a site whose ground is near-black that came out as a black frame around
+  // every sheet — even with `html`/`body` forced white and
+  // `print-color-adjust: exact`, because the canvas is resolved before those
+  // rules matter. Collapsing the margin to zero and insetting the content with
+  // padding means `body`'s white box covers the entire sheet, so there is no
+  // margin box left to paint.
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  // ---------------------------------------------------------------- layout
+  //
+  // The screen layout is built for a wide viewport with generous air. Printed
+  // verbatim it ran to five pages, which is two more than anyone reads.
+  main .shell,
+  .shell,
+  .section,
+  .prose,
+  main,
+  article,
+  section {
+    max-width: none !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    display: block !important;
+  }
+
+  // --------------------------------------------------------------- typography
+  .h1,
+  h1 {
+    font-size: 20pt !important;
+    line-height: 1.1;
+    margin: 0 0 2pt !important;
+  }
+
+  .h2,
+  h2 {
+    font-size: 12pt !important;
+    margin: 14pt 0 4pt !important;
+    padding-block-start: 4pt !important;
+    border-top: 0.75pt solid #000 !important;
+  }
+
+  .h3,
+  h3 {
+    font-size: 11pt !important;
+    margin: 0 !important;
+  }
+
+  .eyebrow {
+    font-size: 7.5pt !important;
+    letter-spacing: 0.08em;
+  }
+
+  .lead {
+    font-size: 10.5pt !important;
+    margin: 0 0 6pt !important;
+  }
+
+  p {
+    margin: 0 0 4pt !important;
+  }
+
+  // ------------------------------------------------------------------ roles
+  //
+  // An employer heading orphaned at a page break is the ugliest thing a résumé
+  // PDF can do, so each role stays whole.
+  .resume-role {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-block: 0 8pt !important;
+  }
+
+  .resume-role__head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    gap: 8pt;
+  }
+
+  .resume-role__meta {
+    font-size: 9pt !important;
+  }
+
+  .resume-role__bullets {
+    margin: 3pt 0 0 !important;
+    padding-left: 12pt !important;
+    list-style: disc !important;
+  }
+
+  .resume-role__bullets li {
+    font-size: 9.5pt !important;
+    line-height: 1.35;
+    margin: 0 0 2pt !important;
+    break-inside: avoid;
+  }
+
+  // ----------------------------------------------------------------- skills
+  .skills {
+    display: block !important;
+  }
+
+  .skills li,
+  .skills dt,
+  .skills dd {
+    font-size: 9pt !important;
+    line-height: 1.35;
+    margin: 0 0 3pt !important;
+    break-inside: avoid;
+  }
+
+  // The one mark worth keeping in colour: the rule under the header. Everything
+  // else is black, so a single accent still reads as deliberate rather than as a
+  // stylesheet that half-applied.
+  .rule--accent {
+    border: 0 !important;
+    border-top: 2pt solid #b8860b !important;
+    margin: 6pt 0 !important;
+  }
+
+  hr,
+  .rule {
+    border: 0 !important;
+    border-top: 0.5pt solid #999 !important;
+    margin: 6pt 0 !important;
+  }
+
+  a {
+    text-decoration: none !important;
+  }
+
+  // In the contact line the URL itself is information — a printed résumé is
+  // usually read away from the machine it was opened on. Mail links already show
+  // their address as the link text.
+  .prose a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+}

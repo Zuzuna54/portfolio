@@ -14,6 +14,9 @@
 // that reads tokens set in 'components'.
 @use 'activity';
 @use 'terminal';
+// Last, so its @media print block overrides everything above it. This is also
+// the source of public/resume.pdf — see the note at the top of the file.
+@use 'print';
 
 // Dark only.
 //

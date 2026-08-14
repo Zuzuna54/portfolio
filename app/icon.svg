@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Terminal prompt">
+  <title>Terminal prompt</title>
+  <!--
+    Favicon: a terminal prompt, matching the site's boot sequence and the
+    interactive terminal behind the backtick key.
+
+    Drawn in a 32-unit viewBox but designed for 16px, which is the size that
+    actually matters. Hence 3.2-unit strokes (a tenth of the box) and exactly
+    two marks; anything finer turns to grey mush in a tab.
+
+    Square caps and a mitre join, not round: the site is brutalist and a rounded
+    terminal glyph would be the one soft corner on the property.
+
+    Colours are the real palette tokens, hard-coded because an SVG served as a
+    file gets no stylesheet. Ground is #100d16, gold is #e8a72c. The ground is
+    opaque rather than transparent so the glyph holds on a light browser tab.
+
+    Note for anyone editing this comment: XML forbids a double hyphen inside a
+    comment, so the tokens cannot be written here with their CSS prefix. That
+    mistake ships silently — the file still returns 200 with the correct
+    content-type, and only a browser actually parsing it shows the error.
+  -->
+  <rect width="32" height="32" fill="#100d16"/>
+  <g fill="none" stroke="#e8a72c" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter">
+    <polyline points="8,10 14,16 8,22"/>
+    <line x1="17.5" y1="22.4" x2="24.5" y2="22.4"/>
+  </g>
+</svg>

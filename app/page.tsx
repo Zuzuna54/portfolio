@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getWork, getWriting } from "@/lib/content";
 import { CONTACT, SUMMARY } from "@/lib/site";
@@ -27,6 +28,14 @@ const TIMELINE: { year: string; what: string; role: string; note: string }[] = [
   { year: "2025", what: "Builders Studio", role: "Senior Platform Engineer", note: "A multi-tenant conversation-intelligence platform — nine queue-driven workers, retrieval, and an MCP server." },
   { year: "2025", what: "Sunny Labs", role: "Founder & Principal Engineer", note: "My own company. Custom hardware, three memory tiers, a voice loop tuned to a 520ms target." },
 ];
+
+// `og:url` only. The root layout deliberately no longer sets it — it was being
+// inherited by every child route, so /work, /resume, /about and /writing all
+// told social crawlers they were the homepage. Each route now declares its own,
+// and this is the homepage's.
+export const metadata: Metadata = {
+  openGraph: { url: "/" },
+};
 
 // Counted from the content directory rather than written down. See the note in
 // app/work/page.tsx — two surfaces shipped a stale count once already.

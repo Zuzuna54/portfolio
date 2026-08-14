@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import ArchDiagram from "@/components/diagrams/ArchDiagram";
+import Byline from "@/components/Byline";
+import ArticleSchema from "@/components/ArticleSchema";
 import { getWork, getWorkBySlug } from "@/lib/content";
 
 export function generateStaticParams() {
@@ -35,6 +37,14 @@ export default async function WorkDetail({ params }: PageProps<"/work/[slug]">) 
 
   return (
     <main id="main">
+      <ArticleSchema
+        type="TechArticle"
+        slug={slug}
+        section="work"
+        sectionName="Work"
+        headline={doc.meta.title}
+        description={doc.meta.problem}
+      />
       <article>
         <header className="section shell">
           <p className="eyebrow">
@@ -79,6 +89,7 @@ export default async function WorkDetail({ params }: PageProps<"/work/[slug]">) 
             </ul>
           </aside>
           <div className="prose">
+            <Byline />
             <MDXRemote source={doc.body} />
           </div>
         </div>

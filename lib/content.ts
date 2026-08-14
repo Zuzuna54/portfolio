@@ -21,9 +21,11 @@ export type WorkMeta = {
   problem: string;
   metrics: Metric[];
   stack: string[];
-  diagram: "pipeline" | "fanout" | "voice";
   order: number;
-  /** Employer-encumbered work is described, never named. */
+  /**
+   * The employer is named; its product, clients and internals are not, and the
+   * denylist enforces that half. This flag drives the note on the case study.
+   */
   encumbered: boolean;
 };
 
@@ -31,11 +33,16 @@ export type WritingMeta = {
   slug: string;
   n: number;
   title: string;
-  /** The date this goes out on LinkedIn. The post is readable here regardless. */
+  /**
+   * When the post was published *here*. This is the date search engines see, so
+   * it has to be a date that has actually happened — all 16 previously carried
+   * their LinkedIn send date, which ran two months into the future. Google
+   * discards a `lastmod` it considers untrustworthy, and a future one qualifies.
+   */
   date: string;
+  /** When it goes out on LinkedIn. Editorial schedule, never a publish date. */
+  shareOn?: string;
   summary: string;
-  diagram?: string;
-  status: "scheduled" | "published";
 };
 
 export type Doc<T> = { meta: T; body: string };

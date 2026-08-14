@@ -44,7 +44,13 @@ export default function ClipReveal({
           clipPath: "inset(0 0% 0 0)",
           duration: 0.9,
           ease: "power3.inOut",
-          clearProps: "willChange",
+          // `clipPath` has to be cleared, not just `willChange`. The tween ends
+          // on a clip equal to the border box — visually a no-op, but it still
+          // clips, and the global focus ring is drawn at `outline-offset: 3px`,
+          // *outside* that box. Leaving it on made the four case-study cards on
+          // `/` focusable with no visible ring. Same containing-block family of
+          // problem as HANDOFF §5.19.
+          clearProps: "willChange,clipPath",
           scrollTrigger: { trigger: el, start: "top 84%", once: true },
         },
       );

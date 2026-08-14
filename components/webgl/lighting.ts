@@ -1,6 +1,4 @@
 import * as THREE from "three";
-import { vec3, float, sin, cos } from "three/tsl";
-import type Node from "three/src/nodes/core/Node.js";
 
 /**
  * The beacon — the site's one moving light.
@@ -10,9 +8,10 @@ import type Node from "three/src/nodes/core/Node.js";
  * it fell on was wrong. Keeping it in one place is what stops six scenes from
  * drifting into six different-looking sites.
  *
- * It exists in two forms because the scenes shade in two different ways: the
- * keyboard uses real three.js lights and a shadow map, the particle scenes shade
- * in TSL. Both read from `ORBIT` so they cannot drift apart.
+ * Only the keyboard actually lights from it, with a real `THREE.Light` and a
+ * shadow map. The constellation scenes shade in TSL and take nothing from here
+ * but `PALETTE` — they are lit by their own per-node brightness, not by the
+ * beacon.
  */
 
 /** Brand palette, matching the OKLCH tokens in `_tokens.scss`. */
@@ -67,7 +66,7 @@ export const ORBIT = {
   pointerZ: 0.62,
 };
 
-/** CPU form, for scenes using real `THREE.Light`s. */
+/** Where the beacon is at time `t`, for scenes using real `THREE.Light`s. */
 export function beaconPositionCPU(
   out: THREE.Vector3,
   time: number,
@@ -81,33 +80,4 @@ export function beaconPositionCPU(
     (ORBIT.height + Math.sin(time * ORBIT.bobRate) * ORBIT.bobAmount) * scale,
     (Math.cos(a) * ORBIT.radiusZ + ORBIT.offsetZ + pointer.y * ORBIT.pointerZ) * scale,
   );
-}
-
-/** TSL form, for scenes shading in the node graph. */
-export function beaconPositionTSL(
-  time: Node<"float">,
-  progress: Node<"float">,
-  pointer: Node<"vec2">,
-) {
-  const a = time.mul(ORBIT.rate).add(progress.mul(ORBIT.scrollSweep));
-  return vec3(
-    sin(a).mul(ORBIT.radiusX).add(pointer.x.mul(ORBIT.pointerX)),
-    float(ORBIT.height).add(sin(time.mul(ORBIT.bobRate)).mul(ORBIT.bobAmount)),
-    cos(a).mul(ORBIT.radiusZ).add(ORBIT.offsetZ).add(pointer.y.mul(ORBIT.pointerZ)),
-  );
-}
-
-/**
- * Distance falloff, softened well away from true inverse-square.
- *
- * Physically correct falloff sends everything past the first row to black. This
- * is a background that has to stay legible behind body text, not a render.
- */
-export function attenuationTSL(dist: Node<"float">) {
-  return float(1).div(float(1).add(dist.mul(dist).mul(0.018)));
-}
-
-/** Distance haze. Without it an unbounded scene ends in a hard band of noise. */
-export function hazeTSL(dist: Node<"float">, rate = 0.045) {
-  return dist.mul(-rate).exp();
 }

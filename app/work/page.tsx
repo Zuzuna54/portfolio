@@ -15,13 +15,23 @@ const count = (n: number) => WORDS[n] ?? String(n);
 
 export function generateMetadata(): Metadata {
   const work = getWork();
+  const n = count(work.length);
+  // Built from the kickers, then held to Google's ~160-char snippet budget by
+  // dropping whole clauses rather than truncating mid-word. Generating this from
+  // content is what keeps it honest as case studies are added; the cap is what
+  // stops it silently overflowing when they are.
+  const head = `${n[0].toUpperCase()}${n.slice(1)} production systems — `;
+  let body = "";
+  for (const d of work) {
+    const next = (body ? `${body}; ` : "") + d.meta.kicker.toLowerCase();
+    if (head.length + next.length + 1 > 158) break;
+    body = next;
+  }
   return {
     title: "Work",
-    description: `${count(work.length)[0].toUpperCase()}${count(work.length).slice(1)} production systems — ${work
-      .map((d) => d.meta.kicker.toLowerCase())
-      .slice(0, 3)
-      .join("; ")}.`,
+    description: `${head}${body}.`,
     alternates: { canonical: "/work" },
+    openGraph: { url: "/work", type: "website" },
   };
 }
 

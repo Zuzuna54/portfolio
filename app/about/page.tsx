@@ -6,8 +6,9 @@ import GitHubActivity from "@/components/GitHubActivity";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Nine years of production engineering — legal-AI document pipelines, ML platform tooling in biotech, founding-engineer work through SOC 2 Type 2, and embedded systems.",
+    "Nine years of production engineering — agent platforms, legal-AI document pipelines, ML tooling in biotech, founding-engineer work through SOC 2 Type 2.",
   alternates: { canonical: "/about" },
+  openGraph: { url: "/about", type: "profile" },
 };
 
 export default function About() {

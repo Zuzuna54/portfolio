@@ -49,11 +49,6 @@
   align-content: center;
 }
 
-.scene__pin {
-  position: relative;
-  overflow: clip;
-}
-
 // Horizontal segment — driven by ScrollTrigger, but degrades to a normal
 // swipeable overflow strip when the timeline isn't running.
 .rail {

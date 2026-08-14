@@ -68,9 +68,12 @@ export default function StructuredData() {
         inLanguage: "en-US",
       },
       {
+        // `/about`, not `/`. Google scopes ProfilePage to pages that focus on a
+        // single person — an "about me" page, an author page, a forum profile.
+        // The homepage is a portfolio landing page that leads with the work.
         "@type": "ProfilePage",
-        "@id": `${SITE_URL}/#profilepage`,
-        url: SITE_URL,
+        "@id": `${SITE_URL}/about#profilepage`,
+        url: `${SITE_URL}/about`,
         about: { "@id": personId },
         isPartOf: { "@id": `${SITE_URL}/#website` },
       },

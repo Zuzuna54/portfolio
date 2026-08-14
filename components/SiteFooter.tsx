@@ -15,8 +15,13 @@ export default function SiteFooter() {
             </p>
           </div>
           <nav className="site-footer__links" aria-label="Contact">
-            <a href={CONTACT.github}>GitHub</a>
-            <a href={CONTACT.linkedin}>LinkedIn</a>
+            {/* `rel="me"` asserts these point at the same person as this page.
+                GitHub already emits `rel="me"` back on its profile website
+                field, so the claim is reciprocal — that pairing is what
+                IndieAuth and Mastodon verification are built on, and it is the
+                same identity assertion the JSON-LD makes via `sameAs`. */}
+            <a href={CONTACT.github} rel="me">GitHub</a>
+            <a href={CONTACT.linkedin} rel="me">LinkedIn</a>
             <a href={`mailto:${CONTACT.email}`}>Email</a>
             <a href={CONTACT.phoneHref}>{CONTACT.phone}</a>
             <a href="/resume.pdf">Résumé PDF</a>

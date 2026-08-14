@@ -3,12 +3,27 @@ import Link from "next/link";
 import { getWriting } from "@/lib/content";
 import Scramble from "@/components/motion/Scramble";
 
-export const metadata: Metadata = {
-  title: "Writing",
-  description:
-    "Sixteen production teardowns — engineer to engineer. One problem, one number, under two hundred words.",
-  alternates: { canonical: "/writing" },
-};
+// Counted, not written down — and no longer claiming "under two hundred words",
+// which stopped being true when the posts were rewritten for depth (~380 now).
+// Descriptions target 150–160 chars: Google truncates around there, and the
+// previous one wasted the budget on a number that dates itself.
+export function generateMetadata(): Metadata {
+  const n = getWriting().length;
+  const description =
+    `${n} production teardowns, engineer to engineer — replayable pipelines, queue-driven ` +
+    `workers, promotion ladders, voice latency. One problem, one real number each.`;
+  return {
+    title: "Writing",
+    description,
+    alternates: { canonical: "/writing" },
+    openGraph: {
+      title: `Writing — ${n} production teardowns`,
+      description,
+      url: "/writing",
+      type: "website",
+    },
+  };
+}
 
 export default function WritingIndex() {
   const posts = getWriting();
@@ -29,7 +44,11 @@ export default function WritingIndex() {
       <section className="shell section" style={{ paddingBlockStart: 0 }}>
         <ul className="post-list" role="list">
           {posts.map((p) => {
-            const upcoming = p.meta.date > today;
+            // "Scheduled" now means *not yet posted to LinkedIn*, not
+            // "not yet published here" — every post has been readable since it
+            // was written. `date` is the real publish date; `shareOn` is the
+            // editorial queue.
+            const upcoming = !!p.meta.shareOn && p.meta.shareOn > today;
             return (
               <li key={p.meta.slug}>
                 <Link href={`/writing/${p.meta.slug}`} className="post-row">

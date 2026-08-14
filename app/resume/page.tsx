@@ -4,8 +4,9 @@ import GridReveal from "@/components/motion/GridReveal";
 
 export const metadata: Metadata = {
   title: "Résumé",
-  description: "Senior AI Platform Engineer — nine years building production systems.",
+  description: "Senior AI Platform Engineer, New York. Nine years across agent platforms, conversation intelligence, decentralized data and embedded voice AI. Full CV and PDF.",
   alternates: { canonical: "/resume" },
+  openGraph: { url: "/resume", type: "profile" },
 };
 
 type Role = {

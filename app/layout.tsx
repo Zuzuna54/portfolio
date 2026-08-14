@@ -9,6 +9,8 @@ import SceneCanvas from "@/components/webgl/SceneCanvasDeferred";
 import RouteTransition from "@/components/motion/RouteTransition";
 import Terminal from "@/components/TerminalDeferred";
 import StructuredData from "@/components/StructuredData";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL } from "@/lib/site";
 import "@/styles/main.scss";
 
@@ -45,32 +47,29 @@ export const metadata: Metadata = {
     default: "Giorgi Giorgobiani — Senior AI Platform Engineer",
     template: "%s — Giorgi Giorgobiani",
   },
+  // 155 chars. The previous one ran to 209 and Google cut it mid-clause, losing
+  // "Nine years of production engineering" — which was the credibility half.
   description:
-    "I build the infrastructure agent systems run on — orchestration, retrieval, evaluation, and the cost and latency controls that decide whether a system survives production. Nine years of production engineering.",
-  keywords: [
-    "AI Platform Engineer",
-    "AI Infrastructure",
-    "Agent Orchestration",
-    "RAG",
-    "Multi-tenant LLM infrastructure",
-    "pgvector",
-    "AWS",
-  ],
+    "Senior AI Platform Engineer in New York. Nine years building the infrastructure agent systems run on: orchestration, retrieval, cost and latency control.",
+  // `keywords` deliberately absent. Google has ignored the meta keywords tag
+  // since 2009; it does nothing but date the site to 2010-era optimisation.
   authors: [{ name: "Giorgi Giorgobiani", url: SITE }],
   creator: "Giorgi Giorgobiani",
+  // Only the fields that are genuinely site-wide.
+  //
+  // `title`, `description` and `url` were set here too, and Next merges parent
+  // metadata into every child — so `/work`, `/resume`, `/about` and `/writing`
+  // all advertised the *homepage* to every social crawler, with an `og:url`
+  // that contradicted their own canonical. Sharing /resume rendered the home
+  // card. Left unset, Next fills og:title and og:description from each page's
+  // own title and description, which is what we want everywhere.
   openGraph: {
     type: "profile",
     siteName: "Giorgi Giorgobiani",
-    url: SITE,
-    title: "Giorgi Giorgobiani — Senior AI Platform Engineer",
-    description:
-      "Agent orchestration, RAG, and multi-tenant LLM infrastructure on AWS.",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Giorgi Giorgobiani — Senior AI Platform Engineer",
-    description:
-      "Agent orchestration, RAG, and multi-tenant LLM infrastructure on AWS.",
   },
   // Canonical on the root, inherited as a base by every page's own `alternates`.
   // The site answers on several *.vercel.app hostnames as well as the real
@@ -150,6 +149,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               one listener rather than competing for the same keydowns. */}
           <Terminal />
         </MotionProvider>
+        {/* Speed Insights is the one that matters for SEO: it produces the
+            *field* data Core Web Vitals ranking actually uses. Lab numbers from
+            Lighthouse are a proxy — and only ~11% of pages on the web have real
+            field data at all, so until this reports, the site's CWV are not
+            being used as a signal either way. Both scripts load after
+            interactive and send nothing on a prerendered page view. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

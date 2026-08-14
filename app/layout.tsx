@@ -8,6 +8,8 @@ import ScrollProgress from "@/components/motion/ScrollProgress";
 import SceneCanvas from "@/components/webgl/SceneCanvasDeferred";
 import RouteTransition from "@/components/motion/RouteTransition";
 import Terminal from "@/components/TerminalDeferred";
+import StructuredData from "@/components/StructuredData";
+import { SITE_URL } from "@/lib/site";
 import "@/styles/main.scss";
 
 // One family, three voices. Recursive's MONO axis slides from proportional sans
@@ -30,7 +32,10 @@ const recursive = Recursive({
   display: "swap",
 });
 
-const SITE = "https://giorgobiani.dev";
+// Was declared here as a second copy of the same string. One origin, in
+// lib/site.ts, so the canonicals, sitemap, robots and JSON-LD cannot disagree
+// about which hostname is the real one.
+const SITE = SITE_URL;
 
 // The visible hero deliberately leads with the work rather than a job title.
 // Recruiter search and link previews still need the title, so it lives here.
@@ -67,7 +72,24 @@ export const metadata: Metadata = {
     description:
       "Agent orchestration, RAG, and multi-tenant LLM infrastructure on AWS.",
   },
-  robots: { index: true, follow: true },
+  // Canonical on the root, inherited as a base by every page's own `alternates`.
+  // The site answers on several *.vercel.app hostnames as well as the real
+  // domain; without this a crawler can index a preview URL and split the ranking
+  // for the owner's own name across two "sites".
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // Let Google show a full text snippet and a large image preview rather
+      // than truncating to a couple of lines.
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
 };
 
 // Dark only — see the note at the top of `styles/main.scss`. Declaring it here
@@ -97,6 +119,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={recursive.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: MOTION_ARM }} />
+        {/* Server-rendered, so it is in the initial HTML rather than in
+            Googlebot's deferred-render queue. */}
+        <StructuredData />
       </head>
       <body>
         <a className="skip-link" href="#main">

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "About",
   description:
     "Nine years of production engineering — legal-AI document pipelines, ML platform tooling in biotech, founding-engineer work through SOC 2 Type 2, and embedded systems.",
+  alternates: { canonical: "/about" },
 };
 
 export default function About() {

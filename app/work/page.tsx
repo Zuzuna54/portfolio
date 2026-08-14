@@ -21,6 +21,7 @@ export function generateMetadata(): Metadata {
       .map((d) => d.meta.kicker.toLowerCase())
       .slice(0, 3)
       .join("; ")}.`,
+    alternates: { canonical: "/work" },
   };
 }
 

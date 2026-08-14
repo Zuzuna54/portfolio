@@ -5,6 +5,7 @@ import GridReveal from "@/components/motion/GridReveal";
 export const metadata: Metadata = {
   title: "Résumé",
   description: "Senior AI Platform Engineer — nine years building production systems.",
+  alternates: { canonical: "/resume" },
 };
 
 type Role = {

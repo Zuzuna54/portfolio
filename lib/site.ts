@@ -20,5 +20,16 @@ export const CONTACT = {
   siteRepo: "https://github.com/Zuzuna54/portfolio",
 } as const;
 
+/**
+ * The canonical origin, no trailing slash.
+ *
+ * Everything that emits an absolute URL reads this — `metadataBase`, the
+ * sitemap, robots, the JSON-LD graph, every per-page canonical. The site answers
+ * on several `*.vercel.app` hostnames as well as the real domain, and a search
+ * engine that indexes both treats them as duplicates and splits the ranking. One
+ * constant means one answer to "where does this page actually live".
+ */
+export const SITE_URL = "https://giorgobiani.dev";
+
 export const SUMMARY =
   "I build the infrastructure that agent systems run on — orchestration, retrieval, evaluation, and the cost and latency controls that decide whether a system survives contact with production.";

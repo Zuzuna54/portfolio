@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Writing",
   description:
     "Sixteen production teardowns — engineer to engineer. One problem, one number, under two hundred words.",
+  alternates: { canonical: "/writing" },
 };
 
 export default function WritingIndex() {

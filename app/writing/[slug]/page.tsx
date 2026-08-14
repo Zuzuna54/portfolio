@@ -17,7 +17,14 @@ export async function generateMetadata(
   return {
     title: doc.meta.title,
     description: doc.meta.summary,
-    openGraph: { title: doc.meta.title, description: doc.meta.summary, type: "article" },
+    alternates: { canonical: `/writing/${slug}` },
+    openGraph: {
+      title: doc.meta.title,
+      description: doc.meta.summary,
+      type: "article",
+      url: `/writing/${slug}`,
+      publishedTime: doc.meta.date,
+    },
   };
 }
 

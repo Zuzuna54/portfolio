@@ -47,17 +47,56 @@
 // Recursive's variable axes. MONO slides the family from proportional sans (0)
 // to true monospace (1), which lets one typeface carry both the reading voice
 // and the terminal voice — and lets us animate between them.
-@mixin recursive($wght: 400, $mono: 0, $casl: 0, $slnt: 0) {
+//
+// Every element writes its axes through the registered custom properties rather
+// than baking numbers into font-variation-settings, so any of them can be moved
+// later by scroll or hover without the element having to opt in. The resting
+// arguments are the whole truth with JS off: `--scroll-energy` is 0 until
+// something publishes it, so `calc(800 + 0 * -55)` is just 800.
+//
+// `$wght-shift` / `$mono-shift` are this element's *response* to the global
+// scroll signal — one clock, many responses, so a heading and a label can react
+// to the same flick by different amounts.
+@mixin recursive(
+  $wght: 400, $mono: 0, $casl: 0, $slnt: 0,
+  $wght-shift: 0, $mono-shift: 0
+) {
+  --axis-wght: calc(#{$wght} + var(--scroll-energy) * #{$wght-shift});
+  --axis-mono: calc(#{$mono} + var(--scroll-energy) * #{$mono-shift});
+  --axis-casl: #{$casl};
+  --axis-slnt: #{$slnt};
   font-variation-settings:
-    'MONO' #{$mono},
-    'CASL' #{$casl},
-    'wght' #{$wght},
-    'slnt' #{$slnt};
+    'MONO' var(--axis-mono),
+    'CASL' var(--axis-casl),
+    'wght' var(--axis-wght),
+    'slnt' var(--axis-slnt);
 }
 
 @mixin mono($wght: 500) {
   @include recursive($wght: $wght, $mono: 1);
   letter-spacing: 0.02em;
+}
+
+// Hover response for interactive type.
+//
+// CASL and slnt, both measured width-neutral in Recursive at 120px: CASL 0→1
+// moves the test string by 0px and slnt 0→-15 by 0.64px. So a hover changes
+// letterform shape without ever reflowing the line — the tactile response is
+// the point; shifting the link out from under the pointer is not. MONO would
+// be the obvious third axis and is excluded for exactly that reason: it moves
+// the same string 788px → 960px.
+//
+// Transitioning a custom property only works because these are @property
+// registered as <number>; unregistered they would step, not tween.
+@mixin axis-hover($casl: 1, $slnt: -4) {
+  @include motion-safe {
+    transition: --axis-casl var(--dur-fast) var(--ease-out),
+                --axis-slnt var(--dur-fast) var(--ease-out);
+  }
+  &:hover, &:focus-visible {
+    --axis-casl: #{$casl};
+    --axis-slnt: #{$slnt};
+  }
 }
 
 // Screen-reader-only, but still focusable (skip links).

@@ -1,5 +1,19 @@
 @use 'mixins' as mx;
 
+// How hard the reader is currently scrolling, 0 (still) → 1 (hard flick).
+// Published by ScrollProgress and damped there, so it decays to 0 when scroll
+// stops rather than freezing at the last flick.
+//
+// Registered so it is a real number: unregistered, `calc(400 + var(…) * -60)`
+// is an invalid-at-computed-value-time string and every axis reading it falls
+// back to its initial value. Also gives it a defined 0 before any JS runs,
+// which is what makes the resting type correct with JS disabled.
+@property --scroll-energy {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
+}
+
 // Start states for anything the scroll timeline drives.
 //
 // Gated on BOTH motion-safe and `html.motion-on`. The second gate matters more
@@ -145,6 +159,11 @@
   // layer above this (see _layout.scss), and the shader's own alpha does most
   // of the restraint — this is the last 15%.
   opacity: 0.85;
+  // A touch of defocus, deliberately small. The network's links are 1px lines —
+  // WebGPU, like WebGL, ignores line width — so a 1px blur halves their peak
+  // and the mesh dissolves back into loose dots. Depth now comes from the link
+  // fade and per-node brightness instead of from a blur.
+  filter: blur(0.4px);
 
   canvas { display: block; width: 100% !important; height: 100% !important; }
 
@@ -198,4 +217,30 @@
   border-block-end: var(--hairline) solid currentColor;
   padding-block-end: 2px;
   &:hover { color: var(--gold); }
+}
+
+// ---------------------------------------------------------- timeline draw
+// The About page's continuous line. Absolutely positioned behind the timeline
+// content, stretched to whatever height the list happens to be.
+.drawline {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 20px;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  @include mx.motion-reduce { display: none; }
+}
+
+.drawline__path {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.drawline__node {
+  fill: var(--gold);
 }

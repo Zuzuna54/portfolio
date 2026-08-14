@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { CONTACT } from "@/lib/site";
+import DrawLine from "@/components/motion/DrawLine";
+import GitHubActivity from "@/components/GitHubActivity";
 
 export const metadata: Metadata = {
   title: "About",
@@ -15,7 +17,10 @@ export default function About() {
         <h1 className="h1">Nine years, mostly infrastructure</h1>
       </section>
 
-      <section className="shell shell--narrow prose" style={{ paddingBlockEnd: "4rem" }}>
+      <section className="shell shell--narrow prose about-track" style={{ paddingBlockEnd: "4rem" }}>
+        {/* One continuous line down the page: a career is a single thing, so the
+            drawing is the argument. Four nodes, one per section heading. */}
+        <DrawLine nodes={4} />
         <p className="lead">
           I build the infrastructure that agent systems run on — orchestration, retrieval,
           evaluation, and the cost and latency controls that decide whether a system survives
@@ -39,8 +44,10 @@ export default function About() {
           made the whole thing replayable from source events.
         </p>
         <p>
-          Alongside both, my own company: an embedded AI companion platform with custom ESP32-S3
-          hardware, four memory layers, and a streaming voice loop that holds under 500ms.
+          Alongside both, my own company: an embedded AI companion platform built primarily in
+          Rust, with custom ESP32-S3 hardware, three memory tiers — Redis, a vector store, and a
+          knowledge graph, queried in parallel every turn — and a streaming voice loop tuned to a
+          520ms target against an 800ms hard budget.
         </p>
 
         <h2>Before that</h2>
@@ -77,6 +84,13 @@ export default function About() {
           <a href={CONTACT.linkedin}>LinkedIn</a>.
         </p>
       </section>
+
+      {/* Outside `.about-track` on purpose. DrawLine places four nodes down the
+          timeline, one per heading in that section — a fifth heading inside it
+          would slide every node off the heading it marks. This renders nothing
+          at all when the API is unreachable, so the page has to read correctly
+          without it, and does. */}
+      <GitHubActivity />
     </main>
   );
 }

@@ -9,19 +9,30 @@ summary: Past about a dozen tools, the model's problem stops being capability an
 A function-calling assistant with a handful of tools is easy. At twenty-four, the failure mode
 changes: the model stops failing at *using* a tool and starts failing at *choosing* one.
 
-We organized ours into five categories — search, retrieval, list, detail, temporal — and the
-categories were as much for the model as for us. Tools that overlap in purpose need names and
-descriptions that make the difference obvious in one line, because one line is what the model reads.
+Ours split into five categories — search, retrieval, list, detail, temporal — six tools, three,
+six, three and two. The categories were as much for the model as for us. Tools that overlap in
+purpose need names and descriptions that make the difference obvious in one line, because one line
+is what the model reads. Six search tools and six list tools is exactly the shape that produces a
+plausible wrong pick.
 
-Two things helped more than anything else.
+Two things helped most.
 
 Dispatching in parallel. Most useful questions need three or four lookups, and running them
-sequentially is the difference between two seconds and eight. Tool calls settle together rather than
-in series.
+sequentially is the difference between two seconds and eight. Calls are issued together and settle
+together, and one failing doesn't block the rest — a failure comes back as a result the model can
+react to next turn, while its siblings complete normally. A tool that throws kills the turn; a tool
+that returns an error teaches the model to try the other one.
 
-And a max-tool-calls fallback. Without a ceiling, a model that has chosen badly will keep choosing —
-call, get an unhelpful result, call again. A bound turns an expensive loop into a degraded answer,
-which is strictly better.
+And a hard ceiling of twenty tool calls per turn. Without one, a model that's chosen badly keeps
+choosing — call, unhelpful result, call again. Hitting the ceiling doesn't cut the model off; it
+forces one final call with no tools available, so the turn ends in an answer rather than a silent
+failure.
+
+One more decision paid off repeatedly: authorization lives in the executor layer, below every tool,
+not inside each one. Every call is checked and logged in one place, with the scope the model asked
+for recorded next to the scope it got. The placement is the guarantee — a model that hallucinates a
+tenant id it was never given hits the same wall regardless of which of the twenty-four tools it
+picked, because the boundary sits underneath the model rather than in front of it.
 
 The lesson generalizes: past a dozen tools, tool descriptions are prompt engineering, not
 documentation. They are the only context the model has at the moment it decides.

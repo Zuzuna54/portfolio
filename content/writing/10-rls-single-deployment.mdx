@@ -6,20 +6,34 @@ status: scheduled
 summary: Per-tenant deployments are easier to reason about and multiply every operation you'll ever perform.
 ---
 
-Two ways to keep tenants apart: give each one their own deployment, or keep one deployment and
-enforce isolation in the database.
+Two ways to keep tenants apart: give each their own deployment, or keep one deployment and enforce
+isolation in the database.
 
 Per-tenant deployment is easier to reason about. It is also a decision to multiply every future
 operation by your customer count. Every migration runs N times. Every deploy is N deploys. Every
 incident is N investigations, and they diverge, because they always diverge.
 
-We used Postgres row-level security in a single deployment. Isolation lives in one place, expressed
-as policies, and that place can be tested exhaustively — you can write a test that asserts tenant A
-cannot see tenant B's rows and run it on every commit. You cannot write that test against a fleet.
+We used Postgres row-level security in a single deployment — one database holding application
+tables, auth tables and the vector index together. Tenant membership is minted into the access
+token by a custom claims hook at login, so the policy reads something no request can forge, and the
+API boundary resolves the caller once instead of threading a tenant id through every function.
 
-The honest cost: RLS is unforgiving. A query path that bypasses the policy — a superuser connection,
-a background job with the wrong role, a raw query written in a hurry — silently sees everything. The
-protection is real but it is one mistake deep, and the mistake doesn't announce itself.
+Isolation lives in one place, expressed as policies, and that place can be tested exhaustively: a
+test asserting tenant A cannot see tenant B's rows, run on every commit. You cannot write that test
+against a fleet.
+
+One boundary wasn't enough once a language model got a query surface. A model that calls tools can
+also invent arguments, including a tenant id it was never given, so scope enforcement sits in the
+executor beneath every tool rather than inside each: one place that rewrites requested scope to
+enforced scope and logs both. Same principle as the policy — put the check below the thing you
+don't trust, not beside it.
+
+The honest cost: RLS is unforgiving. A query path that bypasses the policy — a superuser
+connection, a background job with the wrong role, a raw query written in a hurry — silently sees
+everything. It composes badly with the conveniences that accumulate around a mature schema: a
+soft-delete extension that quietly rewrites reads is exactly the layer that can be told to show
+rows a policy meant to hide. The protection is real but it is one mistake deep, and the mistake
+doesn't announce itself.
 
 So the isolation test isn't optional. It's the thing that makes the architecture safe rather than
 merely correct on the day it was written.

@@ -9,18 +9,30 @@ summary: One queue with a type field is simpler right up until one slow stage st
 The obvious design for a multi-stage LLM pipeline is one queue with a `type` field on the message.
 It is simpler, and it is wrong for the same reason a single thread pool is wrong.
 
-We ran seven queues, one per stage, each with its own dead-letter queue.
+We ran seven queues — six FIFO, one standard for the pure-compute stage — one per pipeline stage,
+each with its own dead-letter queue.
 
-The reason is that the stages have genuinely different shapes. Transcription is long and I/O-bound.
+The stages have genuinely different shapes. Transcription is long and I/O-bound.
 Speaker identification is a cascade of cheap checks with one expensive vision call at the end.
-Video compilation is pure CPU. If they share a queue, they share a retry policy, a concurrency
-limit, and a scaling signal — and the slowest stage sets the pace for all of them.
+Video compilation is pure CPU and doesn't need ordering — the one standard queue in an otherwise
+FIFO fleet. Share a queue and you share a retry policy, a concurrency limit, and a scaling signal,
+and the slowest stage sets the pace for all of them.
 
 Separate queues mean a backed-up stage backs up alone.
 
-The dead-letter queues matter more than the queues. Bounded retries — three attempts, then the
-message moves to its DLQ with a fourteen-day retention — mean a poison message stops costing money
-within seconds instead of retrying until someone notices the bill.
+The dead-letter queues matter more than the queues. Bounded retries — three attempts,
+`maxReceiveCount: 3` — then the message moves to its DLQ with fourteen-day retention, so a poison
+message stops costing money within seconds instead of retrying until someone notices the bill.
+Alarms fire on any DLQ depth of one, or a queue depth over a hundred.
 
-Seven DLQs also means "what is broken" is answerable by looking at which one has depth, rather
-than by grepping logs.
+What made seven queues survivable is that no worker implements any of this itself. One shared pool
+library under all nine handles the parts everyone gets wrong: a visibility heartbeat extending the
+lease seven minutes every three, so a long job isn't redelivered while it's still running; a
+circuit breaker at a 50% error rate in a 30-second window; scale-in protection enabled on job start
+and cleared in a `finally`, so the autoscaler can't kill a task mid-message; and a graceful SIGTERM
+drain that waits up to thirty seconds for in-flight work. Each worker entrypoint is about fifty
+lines of glue on top.
+
+The cost is operational surface: seven sets of alarms and retry policies to misconfigure instead of
+one, plus a shared library whose bugs are everyone's bugs at once. Worth it — "what is broken"
+became answerable by looking at which DLQ has depth, rather than by grepping logs.

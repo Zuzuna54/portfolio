@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import ArchDiagram from "@/components/diagrams/ArchDiagram";
 import { getWork, getWorkBySlug } from "@/lib/content";
 
 export function generateStaticParams() {
@@ -51,11 +52,16 @@ export default async function WorkDetail({ params }: PageProps<"/work/[slug]">) 
 
           {doc.meta.encumbered && (
             <p className="note mono">
-              Built for an employer. Described without naming them, their product, or their
-              clients — the architecture carries the signal, the names don&rsquo;t.
+              Built for an employer, described with their approval. The product, its clients
+              and its internals stay unnamed — the architecture carries the signal, those
+              names don&rsquo;t.
             </p>
           )}
         </header>
+
+        <div className="shell">
+          <ArchDiagram slug={slug} />
+        </div>
 
         <div className="shell split">
           <aside className="split__aside">

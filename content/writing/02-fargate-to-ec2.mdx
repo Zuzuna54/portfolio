@@ -11,16 +11,29 @@ We cut the compute bill on an AI pipeline by about 94%. It wasn't a clever model
 giving up on Fargate.
 
 Fargate is excellent until your workload shapes diverge. Ours had three: model-inference workers
-that wanted sustained CPU, a tiny ingestion service that idled most of the day, and FFmpeg jobs
-that were pure compute and didn't care about architecture.
+that wanted sustained CPU, a tiny ingestion worker that idled nearly all day, and FFmpeg jobs that
+were pure compute and didn't care about architecture.
 
 Paying Fargate's per-task premium across all three meant paying peak pricing for workloads that
 had nothing in common.
 
-We moved to ECS on EC2 with three capacity providers: compute-optimized instances for the AI
-workers, micro instances for ingestion, and ARM64 for FFmpeg. Autoscaling ran on queue backlog
-per task rather than CPU — queue depth is the honest signal for a queue-driven system; CPU lags it
-by minutes.
+We moved to ECS on EC2 with three capacity providers, each matched to a shape: compute-optimized
+x86 for the AI workers, a micro tier for the always-on ingestion worker, and ARM64 Graviton for
+FFmpeg. Placement is bin-pack on memory, which squeezes nine worker services onto fewer instances
+than fixed sizing would; networking is bridge rather than per-task ENIs, so density isn't capped by
+address allocation. Autoscaling ran on queue backlog per task rather than CPU — the honest signal
+for a queue-driven system, since CPU lags it by minutes either direction.
+
+Most of the saving isn't the hourly rate. It's that a spike-then-idle workload stops being billed
+as if it were steady-state, and that three shapes stop being charged at the price of the most
+expensive one.
+
+The cost is real: Fargate exists so you don't own instance lifecycle. Moving off it means you're
+back on the hook for AMI updates, agent versions, draining on scale-in, and the bin-packing Fargate
+used to do for you — an ongoing tax paid in engineering time instead of AWS invoice. You also give
+up per-task isolation; bin-packed tasks are noisy neighbours to each other, which is why the
+RAM-heavy workers got their own task definitions rather than sharing a capacity provider by
+default.
 
 The lesson isn't "Fargate is expensive." It's that one capacity strategy across three workload
 shapes means you're overpaying on at least two of them.

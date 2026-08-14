@@ -3,24 +3,39 @@ n: 14
 title: "Agent memory across sessions: reprocessing vs retention windows"
 date: "2026-10-01"
 status: scheduled
-summary: A sliding window doesn't fail loudly. It just quietly stops knowing you.
+summary: A window forgets by recency. Reprocessing refuses to forget at all. Both are sorting on the wrong axis.
 ---
 
 Every long-lived assistant faces the same decision: what does a new session know about the old ones?
 
-The standard answer is a retention window — keep the last N sessions, or the last N tokens, and
-summarize or drop the rest. It's cheap, it's bounded, and it works beautifully for about a month.
+The standard answer is a retention window — keep the last N sessions or N tokens, summarize or drop
+the rest. Cheap, bounded, works beautifully for about a month.
 
-Then the window slides past the thing you told it in week two. Nothing breaks. No error is logged.
-The assistant just gradually stops knowing you, and by the time anyone notices, there's no incident
-to point at.
+Then the window slides past the thing you told it in week two. Nothing breaks, no error is logged.
+The assistant gradually stops knowing you, and by the time anyone notices there's no incident to
+point at.
 
-For a companion product I built the other way: every new session reprocesses the full history of
-prior sessions. No retention ceiling. Recall at month nine has the same shape as recall at week one.
+The obvious counter-move is to refuse the window: reprocess everything, every session, no ceiling.
+Honest about the failure, and it buys the wrong property — cost grows with history forever, and
+most of a long history doesn't matter.
 
-It is expensive, and the cost grows with history. That's why the memory is split into four layers by
-access pattern — short-term context, episodic facts, emotional state, and a relationship graph — so
-reprocessing walks what's relevant rather than everything ever stored.
+Both options sort on the same axis: a window forgets by recency, full reprocessing declines to
+forget at all. Neither asks whether a memory earned its place.
 
-What I'd change: it should be tiered. Short exchanges shouldn't pay the full cost. I built the
-expensive path first because it proves the idea, but production wants both.
+The design I settled on for a companion product forgets by unimportance. Memory is three tiers,
+queried in parallel every turn. Redis holds session state, the last twenty turns, hot facts
+and the always-in-context core blocks: under 5ms, about 100KB per user. A vector store holds
+episodic, semantic and emotional memories together: under 50ms, about 10MB. A knowledge graph holds
+entities, relationships and bi-temporal facts — what was believed and when it changed, not just
+what's true: under 150ms, about 1MB.
+
+Episodic memory decays on a domain schedule: 30 days for general facts, 90 for emotional-support
+context, 180 for educational progress. Decay is scored rather than a cliff —
+`age × 0.5 + access × 0.3 + confidence × 0.2`. And what survives isn't what's recent, it's what's
+used: a memory accessed more than three times, above 0.8 confidence, older than seven days is
+promoted out of the decaying log into the permanent graph as a structured fact. The raw log ages
+out; the fact it produced doesn't.
+
+The honest cost: those three thresholds are static and global when they should be per-user. A fear
+mentioned twice and never again matters more than a favourite colour mentioned ten times, and the
+bar can't tell the difference.

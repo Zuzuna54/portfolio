@@ -1,0 +1,246 @@
+@use 'functions' as fn;
+@use 'mixins' as mx;
+
+// ---------------------------------------------------------------- terminal
+//
+// The interactive overlay. Same voice as the boot sequence — monospace, a gold
+// `$`, hard edges, no rounding — but this one is a form, so it also has to read
+// as operable: a visible focus state on every control, a real caret, and a
+// close affordance you can see without hunting.
+//
+// Nothing here hides page content. The overlay only exists in the DOM while
+// it is open, and the only global rule is the scroll lock below, which is
+// gated on the overlay actually being present.
+
+// Scroll lock, with its own deadman.
+//
+// `:has(.terminal)` is the whole point: if the class is ever stranded on <html>
+// — a crash between adding it and rendering, a hot reload mid-state — the rule
+// stops matching and the page scrolls again. A stylesheet that can freeze the
+// document has to be able to prove the thing it froze it for is still there.
+// Browsers without :has() simply never lock, which is the safe direction.
+html.terminal-open:has(.terminal) {
+  overflow: hidden;
+}
+
+.terminal {
+  position: fixed;
+  inset: 0;
+  // Above the boot overlay and the custom cursor, both of which can be on
+  // screen at the same moment as this.
+  z-index: calc(var(--z-overlay) + 10);
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: color-mix(in oklab, var(--ground) 82%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.terminal__panel {
+  width: min(100%, 46rem);
+  // dvh, so a mobile URL bar sliding in doesn't push the prompt off screen.
+  height: min(60dvh, 30rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--ground);
+  border: var(--rule) solid var(--line-strong);
+  // Brutalist: the panel is a slab with a lit edge, not a floating card.
+  border-block-start-color: var(--gold);
+}
+
+.terminal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: fn.step(2) fn.step(3);
+  border-block-end: var(--hairline) solid var(--line);
+}
+
+.terminal__title {
+  @include mx.mono(600);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
+
+.terminal__close {
+  @include mx.mono(600);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  border-block-end: var(--hairline) solid currentColor;
+  padding-block-end: 2px;
+
+  &:hover { color: var(--gold); }
+}
+
+// The visible label is "esc ✕"; screen readers get the verb.
+.terminal__sr { @include mx.visually-hidden; }
+
+.terminal__log {
+  overflow-y: auto;
+  // Nothing behind this should move when the log hits its end. The page is
+  // already locked, but a nested scroller that chains reads as broken.
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  padding: fn.step(3);
+  display: grid;
+  align-content: start;
+  gap: fn.step(1);
+
+  // It is in the tab order, so it has to show focus. Inset, because an outline
+  // outside a scroll region gets clipped by the panel edge.
+  &:focus-visible {
+    outline: var(--rule) solid var(--gold);
+    outline-offset: -2px;
+  }
+}
+
+.terminal__line {
+  @include mx.mono(400);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-dim);
+  // URLs are longer than the panel. Wrap them rather than clipping or
+  // introducing a horizontal scrollbar.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal__line--cmd { color: var(--ink); }
+.terminal__line--dim { color: var(--ink-faint); }
+
+// --crimson measures 4.18:1 on this ground, which fails AA for body text.
+// --crimson-hi is the lighter step and is what error copy at this size has to
+// use. See HANDOFF §6 — these ratios were measured, not chosen.
+.terminal__line--err { color: var(--crimson-hi); }
+
+.terminal__key {
+  display: inline-block;
+  min-width: 11ch;
+  padding-inline-end: 1ch;
+  color: var(--gold);
+}
+
+.terminal__form {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6ch;
+  padding: fn.step(2) fn.step(3);
+  border-block-start: var(--hairline) solid var(--line);
+
+  // The input's own outline is suppressed, so the row carries the focus state.
+  // :focus-within rather than :has(:focus-visible) — the input is the only
+  // focusable thing in here and it is always reached deliberately.
+  &:focus-within {
+    outline: var(--rule) solid var(--gold);
+    outline-offset: -2px;
+  }
+}
+
+.terminal__prompt {
+  @include mx.mono(700);
+  font-size: var(--fs-small);
+  color: var(--gold);
+}
+
+.terminal__input {
+  @include mx.mono(400);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  outline: none;
+  caret-color: var(--gold);
+
+  &::placeholder { color: var(--ink-faint); opacity: 1; }
+}
+
+// The custom cursor sits at z 900, below this overlay, and
+// `html.has-custom-cursor *` hides the native one — so without this the panel
+// would have no visible pointer at all. Higher specificity than that rule on
+// purpose, so it holds whatever order the modules are loaded in.
+html.has-custom-cursor .terminal {
+  &, * { cursor: auto; }
+  input { cursor: text; }
+  a, button { cursor: pointer; }
+}
+
+// ------------------------------------------------------------------- hint
+//
+// The only permanent affordance, and deliberately the smallest thing on the
+// page. It is a real button because on touch there is no backtick key: without
+// it the terminal would be desktop-only.
+.terminal-hint {
+  @include mx.mono(600);
+  position: fixed;
+  inset-block-end: var(--gutter);
+  inset-inline-end: var(--gutter);
+  z-index: var(--z-header);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  background: color-mix(in oklab, var(--ground) 72%, transparent);
+  border: var(--hairline) solid var(--line);
+  padding: 0.3rem 0.6rem;
+  opacity: 0.6;
+
+  @include mx.motion-safe {
+    transition: opacity var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out);
+  }
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+
+  // Hidden while the overlay is up — it stays in the DOM because focus returns
+  // to it on close.
+  &.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  span { color: var(--gold); }
+}
+
+// ------------------------------------------------------------------- egg
+//
+// One gold scanline crosses the viewport and is removed a second later. It
+// paints nothing permanent, takes no pointer events, and never touches scroll —
+// the payoff that carries the information is the line printed into the
+// scrollback, which reduced motion gets exactly the same.
+.terminal-flare {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: 0;
+  height: 2px;
+  z-index: calc(var(--z-overlay) + 20);
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+
+  @include mx.motion-safe {
+    animation: terminal-sweep 900ms var(--ease-out) 1 both;
+  }
+  // The reset neutralises animation-duration under reduced motion, which would
+  // land this at 100vh instantly rather than not at all. Take it out properly.
+  @include mx.motion-reduce { display: none; }
+}
+
+@keyframes terminal-sweep {
+  from { transform: translateY(0); opacity: 0; }
+  12%  { opacity: 0.9; }
+  to   { transform: translateY(100vh); opacity: 0; }
+}

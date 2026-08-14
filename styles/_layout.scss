@@ -18,6 +18,48 @@
   padding-block: clamp(4rem, 12vh, 9rem);
 }
 
+// Frosted content surface.
+//
+// The background is a lit 3D scene now, and body copy set over a moving
+// keyboard is hard to read however dark the keyboard is. A blurred, tinted pane
+// under the text fixes legibility without hiding the scene — and it buys back
+// the contrast headroom the background kept costing, so the hero can be as
+// bright as it deserves to be.
+//
+// `main .shell` rather than `.shell`: the header and footer live outside
+// `<main>`, so they are excluded without needing a single per-page edit, and
+// `.shell` is already the one width-constrained wrapper every page uses.
+//
+// Brutalist terms — hard corners, hairline rules, no shadow. This is a
+// material, not a card.
+main .shell {
+  position: relative;
+  background: color-mix(in oklab, var(--ground) 58%, transparent);
+  border-block: var(--hairline) solid color-mix(in oklab, var(--line) 65%, transparent);
+  padding-block: clamp(1.4rem, 3vh, 2.4rem);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  main .shell {
+    // Saturation lift stops the blurred scene behind from going muddy grey.
+    -webkit-backdrop-filter: blur(20px) saturate(130%);
+    backdrop-filter: blur(20px) saturate(130%);
+    // With a real blur behind it the tint can be much lighter, which keeps the
+    // keyboard legible through the panel instead of burying it.
+    background: color-mix(in oklab, var(--ground) 22%, transparent);
+  }
+}
+
+// Inverted sections already own the full viewport colour — a pane inside one
+// reads as a mistake, and there is nothing behind it to frost.
+.invert-scene .shell,
+.invert-crimson .shell {
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-block: 0;
+}
+
 // Full-bleed palette inversion. Because every colour is a custom property,
 // a section can re-declare the whole palette and everything inside it —
 // including SVG diagrams and borders — follows automatically.
@@ -30,18 +72,6 @@
   --line: rgba(255, 255, 255, 0.28);
   --line-strong: rgba(255, 255, 255, 0.6);
   --gold: #fff;
-  background: var(--ground);
-  color: var(--ink);
-}
-
-.invert-gold {
-  --ground: var(--gold);
-  --ink: #100d16;
-  --ink-dim: rgba(16, 13, 22, 0.75);
-  --ink-faint: rgba(16, 13, 22, 0.5);
-  --line: rgba(16, 13, 22, 0.25);
-  --line-strong: rgba(16, 13, 22, 0.55);
-  --gold: #100d16;
   background: var(--ground);
   color: var(--ink);
 }
@@ -164,19 +194,6 @@
   &:hover { color: var(--gold); }
 }
 
-.theme-toggle {
-  @include mx.mono(600);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.12em;
-  color: var(--ink-dim);
-  border: var(--hairline) solid var(--line);
-  padding: 0.4rem 0.7rem;
-  min-width: 4.5rem;
-  text-align: center;
-  transition: color var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out);
-  &:hover { color: var(--gold); border-color: var(--gold); }
-}
 
 // Scroll-driven palette inversion.
 //
@@ -234,4 +251,12 @@ main,
 .site-footer {
   position: relative;
   z-index: var(--z-content);
+}
+
+// The About page's timeline track: room down the left for the drawn line.
+.about-track {
+  position: relative;
+  padding-inline-start: 2.6rem;
+
+  @include mx.until('md') { padding-inline-start: 1.6rem; }
 }

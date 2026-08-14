@@ -9,19 +9,33 @@ summary: A new pipeline shipped as a stack file and deployed without recompiling
 Most data pipelines are programs. You write one, you deploy the service that runs it, and adding a
 pipeline means shipping the service again.
 
-On one platform, pipelines were declared as infrastructure over custom resource types — a stream, an
-indexing-and-query primitive, an agent. Not YAML config read at runtime: actual typed resources in
-an infrastructure-as-code stack, planned and applied like any other.
+On one platform, pipelines were declared as infrastructure over four custom resource types: a
+stream (an ingestion endpoint), an indexing-and-query primitive attached to it, an agent (a
+processing capability with JSON-schema'd tasks), and a campaign config — plus a wiring resource
+that attaches agents to data services. The stacks are TypeScript rather than HCL, synthesized
+through a Terraform CDK against a custom provider that talks to the platform's own API. Not YAML
+read at runtime: typed resources, planned and applied like any other.
 
-A new pipeline is a stack file. It deploys without recompiling any backend service.
+The canonical definition of an indexing primitive is eight lines: a name, its upstream stream, the
+data sources it may read and write, and a reference to an indexing script. That's the load-bearing
+snippet of the whole platform.
 
-The consequence compounds. Because the query operations are declared on the resource, the platform's
-gateway picks them up and exposes each as a tool automatically. So adding a pipeline also adds its
-query surface, with no integration work at all.
+A new pipeline is a stack file and a `deploy`. No backend service gets recompiled. When another
+team later added a whole new vertical, it required zero platform changes — they wrote their own
+indexing logic and declared it as new resources.
 
-The trade is that your primitives have to be right early. Resource types are an API, and changing
-one after people have written stacks against it is a migration, not a refactor. We got the stream
-and query primitives right and the agent primitive slightly wrong — it assumed a shape of work that
-not every agent had.
+The consequence compounds. Because query operations are declared on the resource, the gateway
+exposes each as a tool automatically. Adding a pipeline also adds its query surface, with no
+integration work at all.
+
+The trade is upfront cost, twice. Writing and maintaining a custom provider is real infrastructure
+investment before the first pipeline ships. And primitives have to be right early — resource types
+are an API, and changing one after people have written stacks against it is a migration, not a
+refactor. We got the stream and query primitives right and the agent primitive slightly wrong: it
+assumed every agent's work decomposed into discrete, JSON-schema'd tasks, and not all of them did.
+
+A smaller, permanent cost: indexing scripts are referenced by name, not inlined — right for version
+control, wrong for comprehension. Understanding one pipeline means reading the resource, then
+finding the script it points at.
 
 Extending the system stopped requiring a deploy of the system. That is the whole prize.

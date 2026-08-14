@@ -2,22 +2,41 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getWork, projects } from "@/lib/content";
 
-export const metadata: Metadata = {
-  title: "Work",
-  description:
-    "Three production systems — multi-tenant conversation intelligence, a ten-agent replayable pipeline, and an embedded AI companion platform.",
-};
+/**
+ * Counted, never hardcoded.
+ *
+ * This page said "Three systems" and the terminal said "three case studies" on
+ * the day a fourth shipped — two surfaces stating a number that the content
+ * directory already knew. Anything countable here is derived from `getWork()`,
+ * so adding an MDX file cannot leave a stale claim behind.
+ */
+const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+const count = (n: number) => WORDS[n] ?? String(n);
+
+export function generateMetadata(): Metadata {
+  const work = getWork();
+  return {
+    title: "Work",
+    description: `${count(work.length)[0].toUpperCase()}${count(work.length).slice(1)} production systems — ${work
+      .map((d) => d.meta.kicker.toLowerCase())
+      .slice(0, 3)
+      .join("; ")}.`,
+  };
+}
 
 export default function WorkIndex() {
   const work = getWork();
+  const encumbered = work.filter((d) => d.meta.encumbered).length;
   return (
     <main id="main">
       <section className="section shell">
         <p className="eyebrow">Case studies</p>
         <h1 className="h1">Work</h1>
         <p className="lead" style={{ marginBlockStart: "1.25rem" }}>
-          Three systems I architected. Two were built for employers and are described without
-          naming them — the architecture is the part worth arguing about anyway.
+          {count(work.length)[0].toUpperCase()}
+          {count(work.length).slice(1)} systems I architected. {count(encumbered)[0].toUpperCase()}
+          {count(encumbered).slice(1)} were built for employers and are described without naming
+          them — the architecture is the part worth arguing about anyway.
         </p>
       </section>
 

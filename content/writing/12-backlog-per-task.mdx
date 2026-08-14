@@ -6,20 +6,33 @@ status: scheduled
 summary: Queue depth alone is the wrong signal and CPU is a lagging one. The honest unit is messages per worker.
 ---
 
-Autoscaling a queue-driven system on CPU is scaling on a lagging indicator. By the time CPU rises,
-the backlog already grew; by the time it falls, you already over-provisioned.
+Autoscaling a queue-driven system on CPU is scaling on a lagging indicator. By the time CPU rises
+the backlog already grew; by the time it falls you already over-provisioned.
 
-Autoscaling on raw queue depth is closer but still wrong. Fifty messages with ten workers is
-healthy. Fifty messages with one worker is an incident. Depth alone can't tell them apart.
+Raw queue depth is closer but still wrong. Fifty messages with ten workers is healthy. Fifty with
+one is an incident. Depth alone can't tell them apart.
 
-The honest unit is **backlog per task** — queue depth divided by running workers. We computed it
-every minute in a small function, published it as a custom metric, and target-tracked it at five
-messages per worker.
+The honest unit is **backlog per task** — `ceil(messages / max(runningTasks, 1))`. A scheduled
+function fifty lines long wakes every minute, reads queue depth and running task count, and
+publishes the quotient as a custom metric. Target tracking holds it at five messages per worker,
+scale-out cooldown 60 seconds, scale-in 300, so a brief lull doesn't thrash capacity down and back
+up. The FFmpeg stage runs 120 and 600 instead, because starting an instance for a job that takes
+minutes is a worse trade than waiting.
 
-The interesting bug is scaling from zero. Target tracking fires on *greater than*, so a service
-sitting at zero tasks with messages waiting computes a division by zero, or returns exactly the
-target and never breaches. We returned `max(messages, target) + 0.1` whenever tasks were zero and
-messages weren't — deliberately just over the line, so a sleeping service reliably wakes.
+That the metric is computed rather than read is what turns out to matter. A managed metric would
+have been simpler and would have made the next problem unsolvable.
 
-That fraction is the least elegant line in the system and it is the one that makes scale-to-zero
-safe to run.
+The problem is scaling from zero. Target tracking fires on *greater than*, so a service at zero
+tasks with messages waiting either divides by zero or returns exactly the target and never
+breaches. Either way it sleeps through its own backlog. We returned `max(messages, target) + 0.1`
+whenever tasks were zero and messages weren't — deliberately just over the line, so a sleeping
+service reliably wakes.
+
+That fraction is the least elegant line in the system and the one that makes scale-to-zero safe.
+It's also load-bearing in a way nothing labels: delete the `+ 0.1` and everything still deploys,
+every test passes, and the queue quietly stops draining at 2am.
+
+Most workers are capped at one task — a cost ceiling, not a capacity limit. The autoscaling path
+above it is built and tested; each task already handles ten in-flight messages through its own
+concurrency, so lifting the ceiling is a config change, not a rewrite. The cost of that ceiling is
+that the interesting part of the system is the part that has never run under real load.

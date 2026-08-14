@@ -3,23 +3,36 @@ n: 8
 title: Where the latency actually goes in a sub-500ms voice pipeline
 date: "2026-09-10"
 status: scheduled
-summary: Half a second is the line where people stop talking to a computer and start talking.
+summary: Three different numbers get rounded to "half a second" — a hard budget, a tuned target, and a median. Only one of them is a promise.
 ---
 
-Under about half a second, people just talk. Over it, they start behaving like they're using a
-computer — over-enunciating, waiting, no longer interrupting. The number isn't arbitrary; it's the
-threshold where a system stops feeling conversational.
+Under about half a second, people just talk. Over it, they behave like they're using a computer —
+over-enunciating, waiting, no longer interrupting. The whole design aims at that threshold, and
+it's worth being precise about which number is which, because there are three.
 
-Getting under it is not one optimization. It's refusing, at every stage, to wait for a complete
-result before starting the next one.
+The **budget** is 800ms: the ceiling that trips an alarm. The **target** is 520ms: what the system
+is tuned to hit. And a P50 under half a second is a separate end-to-end success metric — a median,
+not a guarantee. Collapsing all three into "half a second" is how a latency conversation stops
+being an engineering one.
 
-Speech-to-text streams partial transcripts rather than returning at end-of-utterance. The model
-starts generating on the partial. Text-to-speech starts synthesizing on the first clause rather
-than the finished response. Audio starts playing on the first chunk.
+800ms isn't a round number someone picked. It's the sum of eight budgeted stages, each with a
+budget and a tighter target: audio ingestion 20/10, speech-to-text 150/100, context understanding
+30/20, memory retrieval 50/30, agent reasoning 300/200, response generation 50/30, speech synthesis
+150/100, network out 50/30. The budgets sum to 800; the targets sum to 520. Every
+stage owns a number, so a regression has an address instead of a working group. Seventy of those
+800 milliseconds are network transit and audio delivery, before a model is involved at all.
 
-Nothing in that chain has a "done" step before the next stage begins. The end-to-end latency is
-roughly the slowest single hop plus the time to first token, not the sum of four complete stages.
+Those sums only apply if the stages run in series, and the entire point is that they don't.
+Serially — full transcript, then context, then memory, then a complete model response, then
+synthesis — the same work takes 1,230ms. Nothing about that is a conversation.
 
-The part that surprised me is how much of the remaining budget is not inference. It's network
-round-trips, buffer sizes chosen for throughput rather than latency, and the audio driver on the
-device. We spent as long tuning buffers as tuning models.
+So nothing waits for a complete result. Transcription streams partial transcripts instead of
+returning at end of utterance. Memory retrieval fires all tiers in parallel with independent
+timeouts, proceeding with whatever came back in budget. The model streams tokens. Synthesis starts
+on the first finished sentence, not the finished response. Audio plays on the first chunk. Worked
+through, that lands at 480ms to first audio — the listener hears the first word while the rest of
+the answer is still generating.
+
+The cost is that every stage now handles partial and possibly wrong input, and error handling gets
+much harder: you cannot retract audio someone has already heard. Streaming buys the latency and
+pays for it in irreversibility.

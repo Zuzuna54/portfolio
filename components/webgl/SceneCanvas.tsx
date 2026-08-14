@@ -60,18 +60,11 @@ export default function SceneCanvas() {
     let current: { name: SceneName; scene: Scene3D; opacity: number } | null = null;
     let outgoing: { scene: Scene3D; opacity: number } | null = null;
 
-    const readTheme = () => {
-      const attr = document.documentElement.getAttribute("data-theme");
-      return (
-        attr === "light" ||
-        (attr !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches)
-      );
-    };
 
     const mount = (name: SceneName) => {
       const cfg = configFor(tierRef.current);
-      if (cfg.count === 0) return;
-      const built = SCENES[name]({ count: cfg.count, light: frame.light });
+      if (cfg.count === 0 || cfg.tier === "off") return;
+      const built = SCENES[name]({ count: cfg.count, tier: cfg.tier });
       built.setOpacity(0);
       scene.add(built.object);
       if (current) {
@@ -82,16 +75,31 @@ export default function SceneCanvas() {
         outgoing = { scene: current.scene, opacity: current.opacity };
       }
       current = { name, scene: built, opacity: 0 };
+
+      // Shadow passes re-render every caster, so they stay off unless the
+      // scene on screen actually casts. Toggled here rather than once at boot
+      // because only the hero has geometry; the particle scenes have none.
+      if (renderer) renderer.shadowMap.enabled = built.shadows === true;
+
+      // A scene can also ask for a different pixel ratio than the tier default.
+      // Applied here rather than in the loop so it lands before the first frame
+      // of the new scene is drawn.
+      resize();
     };
 
     const resize = () => {
       if (!renderer) return;
       const w = el.clientWidth || window.innerWidth;
       const h = el.clientHeight || window.innerHeight;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, configFor(tierRef.current).dpr));
+      // Scale by whatever is arriving, not what is leaving — during a
+      // cross-fade the incoming scene is the one about to hold the screen.
+      const scale = current?.scene.dprScale ?? 1;
+      const cap = configFor(tierRef.current).dpr * scale;
+      renderer.setPixelRatio(Math.max(Math.min(window.devicePixelRatio, cap), 0.35));
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      frame.aspect = w / h;
     };
 
     // Watchdog: two consecutive bad seconds drop a tier. Consecutive samples
@@ -156,7 +164,6 @@ export default function SceneCanvas() {
       const dt = Math.min((now - last) / 1000, 1 / 20);
       last = now;
       frame.time += dt;
-      frame.light = readTheme();
 
       readScrollVars(getComputedStyle(document.documentElement));
 
@@ -194,7 +201,22 @@ export default function SceneCanvas() {
       sampleFps();
     };
 
-    (async () => {
+    /**
+     * Rebuild everything from scratch. Called once on mount, and again if the
+     * GPU device is lost.
+     *
+     * Device loss is not exotic: a laptop switching between integrated and
+     * discrete graphics, a driver update, or the browser reclaiming a
+     * background tab's GPU memory will all do it, and the page has no way to
+     * prevent any of them. Without this, the first loss is permanent for the
+     * session — the canvas stays in the DOM, the render loop keeps running,
+     * `render()` silently draws nothing, and the background is simply gone.
+     * Observed exactly that: "A valid external Instance reference no longer
+     * exists", 0 draw calls, no other symptom.
+     */
+    let attempts = 0;
+
+    const boot = async () => {
       const backend = await detectBackend();
       if (disposed || backend === "none") return;
 
@@ -209,12 +231,37 @@ export default function SceneCanvas() {
         return;
       }
 
+      // Re-entry after a loss: the old canvas element belongs to a dead device.
+      while (el.firstChild) el.removeChild(el.firstChild);
+
       renderer.setClearColor(0x000000, 0);
+      // Hard-edged shadows. The site is brutalist — a soft penumbra reads as
+      // ambient glow, which is the opposite of the intent. Cheaper, too.
+      renderer.shadowMap.type = THREE.BasicShadowMap;
       el.appendChild(renderer.domElement);
       el.dataset.backend = backend;
       el.dataset.tier = tierRef.current;
 
-      frame.light = readTheme();
+      // Bounded, because a device that dies immediately on every attempt would
+      // otherwise spin forever reallocating GPU resources — which is a good way
+      // to turn a recoverable glitch into a hung tab.
+      // Typed structurally rather than against @webgpu/types, which isn't a
+      // dependency — the WebGL2 backend has no `device` at all and just skips.
+      const device = (renderer as unknown as {
+        backend?: { device?: { lost?: Promise<unknown> } };
+      }).backend?.device;
+
+      void device?.lost?.then(() => {
+        // dispose() during unmount also resolves this — that's teardown, not
+        // failure.
+        if (disposed || attempts >= 2) return;
+        attempts++;
+        current = null;
+        outgoing = null;
+        cancelAnimationFrame(raf);
+        void boot();
+      });
+
       resize();
       mount(wanted.current);
 
@@ -226,12 +273,37 @@ export default function SceneCanvas() {
           renderer, scene, camera, frame,
           get current() { return current?.name; },
           get children() { return scene.children.length; },
+          /** The live Scene3D, so uniforms can be driven from the console. */
+          get scene3d() { return current?.scene; },
+          /**
+           * Render one frame by hand. rAF is paused in a hidden tab, which
+           * makes "the shader is broken" and "the loop isn't running" look
+           * identical — this tells them apart without needing focus.
+           */
+          step(dt = 1 / 60) {
+            if (!renderer || !current) return null;
+            frame.time += dt;
+            // Do the pending route swap too. The loop normally owns this, and
+            // in a hidden tab the loop is frozen — so without this, stepping
+            // after a navigation reports the *old* scene and looks exactly like
+            // a broken route mapping.
+            if (current.name !== wanted.current) mount(wanted.current);
+            // setOpacity BEFORE update, matching the render loop. Reversed, a
+            // scene that scales light intensity by opacity renders unlit — and
+            // that reads exactly like a broken light rig.
+            current.scene.setOpacity(1);
+            current.scene.update(dt);
+            renderer.render(scene, camera);
+            return { name: current.name, draws: renderer.info.render.drawCalls };
+          },
         };
       }
       prevScroll = window.scrollY;
       last = performance.now();
       raf = requestAnimationFrame(loop);
-    })();
+    };
+
+    void boot();
 
     const onResize = () => resize();
     window.addEventListener("resize", onResize);
@@ -252,7 +324,9 @@ export default function SceneCanvas() {
     const onPointer = (e: PointerEvent) => {
       const nx = (e.clientX / window.innerWidth) * 2 - 1;
       const ny = -((e.clientY / window.innerHeight) * 2 - 1);
-      frame.pointer.lerp(new THREE.Vector2(nx * 12, ny * 7), 0.35);
+      // Lerp raised from 0.35: at the old rate the pointer lagged far enough
+      // behind the cursor that the light felt scripted rather than followed.
+      frame.pointer.lerp(new THREE.Vector2(nx * 12, ny * 7), 0.6);
     };
     window.addEventListener("pointermove", onPointer, { passive: true });
 

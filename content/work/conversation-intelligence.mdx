@@ -2,7 +2,7 @@
 title: Multi-tenant conversation intelligence
 kicker: Turning 100 hours of calls a week into something you can query
 role: Senior Platform Engineer
-period: 2025–2026
+period: Nov 2025 – Jul 2026
 order: 1
 diagram: pipeline
 encumbered: true
@@ -49,8 +49,14 @@ up with something a person could *query* — and, later, something an agent coul
 
 Nine workers across seven queues: transcription, speaker identification, summary, learning
 extraction, collage, reflection, and the supporting ingestion and reprocessing stages. Each queue
-has its own dead-letter queue with bounded retries, and a shared concurrent message-pool library
-is the reliability backbone underneath all nine.
+has its own dead-letter queue with bounded retries, and a shared concurrent message-pool library is
+the reliability backbone underneath all nine — not just a name for "shared retry logic" but four
+specific mechanisms: a visibility-timeout heartbeat that extends SQS visibility by 7 minutes every
+3 minutes so long-running jobs survive past the default 15-minute window, a circuit breaker that
+trips at a 50% error rate in a 30-second window, ECS scale-in protection enabled the moment a job
+starts and disabled in a `finally` block so the autoscaler can never kill a task mid-job, and a
+graceful SIGTERM drain that waits up to 30 seconds for in-flight messages before exiting. Every
+worker entrypoint shrinks to about 50 lines of glue on top of it.
 
 Queue-per-stage rather than one queue with a type field, because the stages have genuinely
 different shapes. Transcription is long and I/O-bound. Speaker identification is a cascade of
@@ -58,7 +64,36 @@ cheap checks with an expensive vision call at the end. Collage is pure FFmpeg co
 each its own queue means each gets its own retry policy, its own concurrency, and its own scaling
 signal — and one stage backing up never starves another.
 
+Two scars from running this in production, not just designing it. A documented Gemini 2.5 Pro bug
+returns empty responses when `maxOutputTokens` is set below 2048, so the summary worker pins a
+floor of 8192 regardless of what a given response actually needs. And OpenAI embedding calls are
+batched at 100 requests a second with a deliberate 1-second delay between batches — not for
+throughput, but to stay under the per-org token-per-minute cap. Without that throttle, scaling
+workers horizontally would blow straight through the limit and every worker would start failing at
+once.
+
+## Threads, scored not matched
+
+Deciding whether a new call continues an existing thread — the same deal, the same recurring
+conflict — isn't a lookup, it's a score: `0.50 × company_match + 0.35 × jaccard(speakers) + 0.15 ×
+time_decay`. Above a threshold, the conversation joins the highest-scoring active thread; below it,
+it starts a new one.
+
+The 50/35/15 split wasn't guessed. It was tuned empirically against 200 labeled conversation
+pairs — "same thread" or "different thread" — picking the weighting and threshold that maximized
+F1. Company match dominates because it's the strongest signal a person would use too; speaker
+overlap catches the case where the company changes but the actual conversation is the same; time
+decay stops two unrelated calls six months apart from linking just because the same two people
+happened to be on both.
+
 ## The decision I'd defend hardest
+
+Underneath the promotion ladder is a three-layer model that's the actual spine of the pipeline:
+**Learnings** (per-conversation insights the learning-extraction worker pulls straight out of a
+transcript), **Promoted Signals** (the same insight once it recurs across multiple conversations,
+clustered by cosine similarity), and **Artifacts** (31 generated documents — briefs, digests,
+one-pagers — created once their prerequisite signals exist). Everything downstream of transcription
+exists to move a fact from the first layer to the third.
 
 Extracted learnings climb a four-stage ladder — candidate, emerging, validated, decision-grade —
 promoted on evidence thresholds: three pieces to reach emerging, five across two distinct
@@ -121,6 +156,14 @@ Three EC2 capacity providers, each tuned to a shape, with autoscaling driven by 
 per task** rather than CPU. Queue depth alone is the wrong signal — fifty messages with ten
 workers is fine, fifty with one is not — and CPU lags reality by minutes on a queue-driven system.
 Backlog-per-task is the honest unit. About 94% off the compute bill.
+
+Waking a service back up from zero tasks needed its own trick. Target-tracking alarms fire on `>`,
+not `>=`, so a metric sitting exactly on the target value never breaches — and with zero tasks
+running, backlog-per-task isn't a number the alarm can even compute. The backlog-metric Lambda
+works around it: when there are no running tasks and at least one message waiting, it reports
+`max(messages, target) + 0.1` instead of the literal backlog. That reliably trips the alarm and
+brings a task back online. It's a small, deliberately hacky fix for a real gap in how
+target-tracking alarms are defined.
 
 ## What I'd do differently
 

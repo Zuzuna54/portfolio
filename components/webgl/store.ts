@@ -20,6 +20,11 @@ export const frame = {
    * pulls the other way.
    */
   velocity: 0,
+  /**
+   * How hard the reader is scrolling right now, 0→1, already damped so it
+   * decays to 0 when scrolling stops. Published by ScrollProgress.
+   */
+  energy: 0,
   /** Hero formation, 0 scatter → 1 graph. */
   heroProgress: 0,
   /** Hero relaxing into a drift field as it leaves, 0→1. */
@@ -28,10 +33,13 @@ export const frame = {
   pointer: new THREE.Vector2(999, 999),
   /** Seconds since mount. */
   time: 0,
-  /** True when the light theme is active — scenes switch blending on it. */
-  light: false,
   /** Particle budget for the current device tier. */
   count: 6000,
+  /**
+   * Viewport aspect (w/h). Scenes that build their own rays need it; the ones
+   * rendering through the shared perspective camera get it for free.
+   */
+  aspect: 1,
 };
 
 const num = (v: string) => {
@@ -42,6 +50,7 @@ const num = (v: string) => {
 /** Pull the CSS-published scroll values. One clock for CSS, GSAP and the GPU. */
 export function readScrollVars(css: CSSStyleDeclaration) {
   frame.progress = num(css.getPropertyValue("--scroll-progress"));
+  frame.energy = num(css.getPropertyValue("--scroll-energy"));
   frame.heroProgress = num(css.getPropertyValue("--hero-progress"));
   frame.heroSettle = num(css.getPropertyValue("--hero-settle"));
 }

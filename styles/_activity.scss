@@ -1,0 +1,84 @@
+@use 'mixins' as mx;
+
+// ---------------------------------------------------------------- activity
+//
+// The live GitHub strip. Deliberately the same hairline-row-with-a-hover
+// grammar as `.post-row`, one step quieter: this is evidence that the work is
+// ongoing, not a thing to read. It borrows the palette tokens rather than
+// declaring colours, so it follows an inverted section like everything else.
+//
+// Nothing here hides content and nothing here animates position — the only
+// transitions are colour, which the reduced-motion block in `_reset.scss`
+// already clamps. The component renders `null` when there is no data, so this
+// stylesheet never has an empty state to style.
+
+.activity {
+  // Lighter than `.section`: this sits under a page rather than beside one.
+  padding-block: clamp(2.5rem, 7vh, 4.5rem);
+}
+
+// `<h2>` for the document outline, `.eyebrow` for the voice. The UA's bold
+// would otherwise select a different instance than the wght axis `.eyebrow`
+// sets, so pin it back to the same footing as every other eyebrow on the site.
+.activity__title {
+  font-weight: 400;
+}
+
+.activity__list {
+  margin-block-start: 1.5rem;
+  border-block-start: var(--hairline) solid var(--line);
+}
+
+.activity__row {
+  display: grid;
+  gap: 0.15rem 1.5rem;
+  padding-block: 0.8rem;
+  border-block-end: var(--hairline) solid var(--line);
+  color: var(--ink);
+  transition: background-color var(--dur-fast) var(--ease-out);
+
+  // Three columns from md up: which repo, what happened, when. Only the middle
+  // column is elastic, so a long PR title wraps inside itself and the
+  // timestamps stay in a column you can scan straight down.
+  @include mx.from('md') {
+    grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+
+  &:hover {
+    background: color-mix(in oklab, var(--ground-2) 55%, transparent);
+    -webkit-backdrop-filter: blur(6px) saturate(135%);
+    backdrop-filter: blur(6px) saturate(135%);
+
+    .activity__repo { color: var(--gold); }
+  }
+}
+
+.activity__repo {
+  font-size: var(--fs-small);
+  color: var(--ink-dim);
+  transition: color var(--dur-fast) var(--ease-out);
+  // Repo names are one unbreakable token; without this a long one widens the
+  // grid column instead of wrapping.
+  overflow-wrap: anywhere;
+}
+
+.activity__what {
+  font-size: var(--fs-small);
+  max-width: 62ch;
+}
+
+.activity__when {
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  // Tabular so the column reads as a column, and no-wrap so "3 minutes ago"
+  // never breaks across two lines at the narrow end of the md range.
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.activity__more {
+  margin-block-start: 1.5rem;
+}

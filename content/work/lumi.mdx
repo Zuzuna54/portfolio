@@ -1,9 +1,9 @@
 ---
 title: An AI companion that doesn't forget you
-kicker: Custom hardware, four memory layers, and a voice loop under half a second
+kicker: Custom hardware, three memory tiers, and a voice loop tuned to 520ms
 role: Founder & Principal Engineer
-period: 2025–present
-order: 3
+period: Aug 2025 – Present
+order: 4
 diagram: voice
 encumbered: false
 problem: A companion device has to remember you across months and answer fast enough to feel like conversation. Those two requirements pull against each other.
@@ -11,26 +11,27 @@ summary: >
   A companion device has two hard requirements that pull against each other: it has to remember
   you across months, and it has to answer fast enough to feel like conversation rather than a
   query. I built the platform end to end — custom ESP32-S3 hardware, the memory system, and a
-  multi-tenant cloud backend licensed to third-party brands as a white-label brain. Memory is four
-  layers across Redis, PostgreSQL and a graph store. The unusual choice is that every new session
-  reprocesses the full history of prior sessions rather than reading a fixed retention window, so
-  recall stays consistent at month nine the way it was at week one. The voice path is streaming
-  end to end and holds under 500ms. Hardware went from concept to first functional module in under
-  four weeks.
+  multi-tenant cloud backend licensed to third-party brands as a white-label brain. Memory is
+  three tiers — Redis for anything needed in under 5ms, a vector store for semantic and emotional
+  recall under 50ms, a knowledge graph for structured relationships under 150ms — queried in
+  parallel every turn. Episodic memory decays on a 30/90/180-day schedule by domain, but anything
+  a child returns to repeatedly gets promoted into the permanent knowledge graph, so what actually
+  matters never ages out even though the raw log does. The voice path is streaming end to end,
+  budgeted at 800ms and tuned to hit 520ms.
 metrics:
-  - { value: "<500ms", label: "voice loop" }
-  - { value: "4", label: "memory layers" }
-  - { value: "0", label: "retention ceiling" }
+  - { value: "520ms", label: "latency target" }
+  - { value: "800ms", label: "hard budget" }
+  - { value: "3", label: "memory tiers" }
+  - { value: "3x", label: "accesses to promote" }
   - { value: "ESP32-S3", label: "custom hardware" }
-  - { value: "RLS", label: "per-device isolation" }
-  - { value: "<4 wks", label: "concept → module" }
+  - { value: "Per-child", label: "vector + graph isolation" }
 stack:
   - C/C++
   - ESP32-S3
   - TypeScript
   - Redis
-  - PostgreSQL
-  - FalkorDB
+  - Qdrant
+  - Neptune
   - Streaming STT/TTS
 ---
 
@@ -46,60 +47,147 @@ is somewhere on that line.
 This one is entirely my own company, so unlike the other two studies I can say whatever I like
 about it.
 
-## Four layers of memory
+## Three tiers of memory
 
-Short-term context in Redis. Episodic facts in Postgres. Emotional state tracked separately. A
-long-term relationship graph in a graph store.
+L1 in Redis: session state, conversation history, hot facts, and six core memory blocks — persona,
+human, relationship, session, goals, emotional — that stay in context permanently rather than being
+retrieved. Read every turn, under 5ms.
 
-They're split because they have different access patterns and different lifetimes, not because
-layering is tidy. Short-term context is read every turn and thrown away. Episodic facts are
-written rarely and read on recall. The relationship graph is traversed, not scanned — which is
-precisely what a graph store is good at and a relational store is not.
+L2 in a vector store: episodic, semantic, and emotional memories together, one collection per
+child, ranked by similarity. Emotional memory isn't a separate tier — it's a memory type inside L2,
+tagged with which support strategy was used and how well it worked. Under 50ms.
 
-## The choice I'd defend
+L3 in a knowledge graph: entities, relationships, and bi-temporal facts — what a child believed and
+when it changed, not just what's true now. Traversed, not scanned, which is what a graph store is
+good at and a vector store is not. Under 150ms, with a 50ms timeout in the critical path so a slow
+graph query never holds up a response.
 
-Every new session **reprocesses the full history of prior sessions**. There is no retention
-window and no ceiling.
+All three are queried in parallel. L1 is required — retry on failure. L2 and L3 race the clock;
+whatever comes back within budget gets merged in, and the turn proceeds either way.
 
-This is expensive and it is the whole product. The failure mode I was designing against is the one
-every long-lived assistant has: it works beautifully for a month, then the window slides, and it
-quietly starts forgetting the thing you told it in week two. Nobody notices the moment it happens.
-They just notice, eventually, that it doesn't know them anymore.
+## Decay, then promote
 
-A fixed window makes that certain. Reprocessing makes recall at month nine the same shape as
-recall at week one.
+Episodic memories don't live forever by default. They decay on a domain-specific schedule — 30
+days for general facts, 90 for anything tagged emotional-support, 180 for educational progress —
+because a fixed window is honest about what it's for: privacy, not permanence.
 
-The cost is real — session start is heavier, and it grows with history. That's the trade I took,
-and it's why the memory layers are split by access pattern: the reprocessing path only has to walk
-what's actually relevant, not everything ever stored.
+What survives is decided by three conditions, all of which have to be true: accessed more than
+three times, confidence above 0.8, and at least seven days old. Meet all three and a memory gets
+promoted out of the decaying episodic log and into the permanent knowledge graph as a structured
+fact. The raw conversation can age out; the fact that survived it doesn't.
 
-A separate subsystem of background agents reads conversation metadata and evolves the character
-configuration over time, so personality drifts with the relationship rather than being static
-across it.
+That's a deliberate bet, not a compromise. The failure mode I was designing against isn't "forgets
+everything" — it's the one every long-lived assistant eventually hits, where the important thing
+from week two quietly falls out of a sliding window and nobody notices until the companion doesn't
+know you anymore. Decay-and-promote hedges against that without paying to reprocess a growing
+history forever: the promotion criteria do the triage, so the expensive tier only ever holds what
+earned its way there.
 
-## Under 500ms
+The honest cost: the thresholds are static and global right now. A fact a child mentions only
+twice but that matters enormously — a fear, a loss — can still fall through if it's never repeated.
+Effectiveness-tagged emotional memories get an exemption from decay above a 0.7 effectiveness
+score, which covers some of that gap. Not all of it.
 
-Streaming end to end — streaming speech-to-text into the model into custom text-to-speech. Nothing
-waits for a complete result before starting the next stage.
+## Reading feeling, not just words
 
-That number is the difference between conversation and transaction. Past roughly half a second,
-people start behaving like they're using a computer: they over-enunciate, they wait, they stop
-interrupting. Under it, they just talk.
+Audio and text are analyzed in parallel on every turn — a wav2vec2 model plus prosodic features
+(pitch, energy, tempo) on the audio side, RoBERTa plus a keyword layer on the text side — and fused
+with a 60/40 base weighting toward audio. That split isn't arbitrary: a 2-to-8-year-old's
+vocabulary is limited enough that tone of voice is the more reliable signal most of the time. But
+the weights aren't fixed — they scale by each model's own confidence, so a child explicitly saying
+"I'm scared" can override an uncertain audio read, and a 3-turn temporal-smoothing window keeps one
+noisy frame from swinging the detected emotion around.
+
+Once an emotion is detected, which of eight support strategies to use — comfort, encouragement,
+distraction, problem-solving, listening, normalization, positive-memory recall, physical comfort —
+is chosen by a weighted formula: 30% base fit for the emotion, 50% this child's own historical
+effectiveness with that strategy, 20% conversational context. The heavy weight on personal history
+is what makes it personalization rather than a decision tree — after a handful of interactions
+there's enough signal to know whether a particular kid responds better to being distracted or being
+heard. A 10% exploration rate keeps the system from locking onto a locally-good strategy too early;
+without it, the first strategy that works okay would crowd out one that might work better.
+
+## Two safety nets, not one
+
+A synchronous keyword blocklist runs before every response and blocks immediately — phrases like
+"hurt me" or "want to die" can't wait for a model call. An async LLM-based check runs alongside it
+in a background task, catching what the keyword list misses without adding latency to the
+conversation, since it never blocks the response.
+
+Neither of those catches a slow-building problem, so a third layer watches across turns and
+sessions: a background pattern detector flags prolonged high-intensity negative emotion sustained
+past five minutes, or an emotional trajectory that's been declining across multiple sessions rather
+than one bad conversation. Critical flags — the keyword-level ones — page a parent immediately.
+Medium-severity pattern flags roll into a daily digest instead, because not every concerning trend
+needs a 2am notification.
+
+## Lumi can start the conversation
+
+Everything above assumes Lumi is responding. It also initiates — checking in, following up on
+something from days ago, celebrating a finished story — scored by a six-factor formula: 30% base
+trigger priority, 20% this child's engagement history with past proactive messages, 15% a recency
+curve that peaks at 2–6 hours since last contact (too soon reads as clingy, too long reads as
+having given up), 25% predicted receptiveness for the current hour, 10% topic relevance, and a
+frequency penalty that grows as the daily cap approaches. Only scores above 0.5 get delivered.
+
+If there's no response, the exit is tiered rather than abrupt — three timeout windows, age-adjusted
+(toddlers get 8/15/20-second tiers, school-age kids 15/30/45), each with a gentler message than the
+last, ending in a warm sign-off rather than silence. Frequency starts conservative — three
+initiations a day, an hour apart minimum — and adjusts automatically from measured per-child
+receptiveness rather than a fixed setting.
+
+This is the subsystem I get asked about least and would defend most: reactive-only assistants feel
+like tools. The thing that makes a companion feel like a relationship is that it sometimes reaches
+out first.
+
+## Eight agents, four lanes
+
+"A separate subsystem of background agents evolves the character over time" undersells what's
+actually eight named agents — memory consolidation, context pre-warming, personality evolution,
+index optimization, proactive learning, safety monitoring, memory-relevance recognition,
+conversation-effectiveness analysis — consuming events off Redis Streams consumer groups through a
+four-worker tokio pool.
+
+The detail worth calling out: two of the four workers are permanently reserved for critical and
+high-priority work only — safety monitoring and memory consolidation. A burst of low-priority
+optimization tasks can fill the other two workers completely, and it still can't delay a safety
+check. That's a small allocation decision with an outsized effect: it makes "critical work never
+waits behind background work" true by construction instead of by hoping the scheduler behaves.
+
+## The 520ms target, 800ms budget
+
+Every stage between a child finishing a sentence and hearing a reply has a budget and a tighter
+target: 800ms is the ceiling that trips an alarm, 520ms is what the system is actually tuned to
+hit. Streaming end to end — speech-to-text streaming into the model streaming into text-to-speech —
+is what makes the tighter number reachable at all; nothing waits for a complete result before the
+next stage starts. Audio ingestion, transcription, memory retrieval, and reasoning overlap instead
+of stacking, and a worked-through example under full streaming lands around 480ms to first audio.
+
+That gap matters. Past roughly half a second, people start behaving like they're using a computer:
+they over-enunciate, they wait, they stop interrupting. Under it, they just talk. The 800ms budget
+is what keeps a single slow tier from becoming a broken conversation; the 520ms target is what
+keeps the good conversations feeling like conversation.
 
 ## Isolation and hardware
 
-The backend is licensed to third-party brands as a white-label platform, which makes per-device
-memory separation a hard requirement rather than a nice property. Postgres row-level security
-enforces it — one brand's devices can never reach another's, and that's true at the database
-rather than by convention in application code.
+The backend is licensed to third-party brands as a white-label platform, which makes per-child
+memory separation a hard requirement rather than a nice property. There's no relational store to
+put row-level security on — isolation is structural instead: every child gets their own vector
+collection and their own graph subgraph, so one brand's devices can't reach another's data by
+construction, not by convention in application code.
 
-On the hardware side: custom ESP32-S3, low-power, cloud-first, from concept to first functional
-module in under four weeks. Speed there came from deciding early that the device would be thin —
-capture, stream, play — and that everything interesting would live in the cloud.
+On the hardware side: custom ESP32-S3, low-power, cloud-first — thin capture/stream/play at the
+edge, with everything that makes Lumi feel intelligent living in the cloud.
 
 ## What I'd do differently
 
-Reprocessing full history is the right default and the wrong *only* option. There should be a
-tier — a cheap path for short sessions that doesn't pay the full cost, escalating to full
-reprocessing when the conversation goes somewhere that needs it. I built the expensive path first
-because it's the one that proves the idea, but production wants both.
+The promotion thresholds — three accesses, 0.8 confidence, seven days — are global constants, not
+per-child or per-domain. A memory that would matter enormously to one child but that they only
+mention once has to clear the same bar as anything else. I'd keep the decay schedule domain-based
+(it should be) but make the promotion bar adapt to how much a given child actually talks — a chatty
+kid and a quiet kid shouldn't need the same three mentions to prove something matters.
+
+The proactive system's frequency limits also start from the same defaults for every child before
+they've said anything. A week of generic caps while the receptiveness model gathers enough signal
+to specialize is a reasonable cold start, but it's still a week of either being too quiet or
+slightly annoying before it corrects.

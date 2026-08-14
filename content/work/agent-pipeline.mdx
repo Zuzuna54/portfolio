@@ -2,7 +2,7 @@
 title: A ten-agent pipeline that can be replayed
 kicker: Fan out the reads, serialize the writes
 role: Senior Software Engineer
-period: 2025
+period: Apr 2025 – Oct 2025
 order: 2
 diagram: fanout
 encumbered: true
@@ -46,13 +46,20 @@ interleavings you have to reason about — and the failures show up as corrupted
 
 ## Fan out the reads, serialize the writes
 
+Before the ten-agent fan-out runs at all, a Redis-only batching layer collects incoming messages
+until a batch threshold or timeout is hit. That step is why the fan-out is affordable — one model
+call per agent per batch, not per message. The story usually gets told starting at "ten agents read
+the same batch in parallel," which skips the part that makes it economical.
+
 Seven model-backed agents — sentiment, embedding, toxicity, spam, emoji, topic, relationship —
 each make exactly one model call per batch and return a result. They are stateless. They touch
 nothing. Because they share no state, they parallelize perfectly, and adding an eighth costs
 nothing conceptually.
 
-Three coordination agents handle graph management, index management, and context building. One of
-them is the **only** writer. Every result merges through it.
+Three coordination agents split the rest of the work, each with a specific job: one merges every
+model agent's result into the in-memory graph, one maintains the vector index, one assembles
+context for the downstream query layer. The first of those — the graph merger — is the **only**
+writer. Every result merges through it.
 
 No locks. No partial merges. No ordering bugs. The pattern is old and it is the entire reason this
 system was debuggable.
@@ -85,7 +92,8 @@ transcripts. This one needed to cluster short chat messages into topics. Bigger 
 cost storage and query time to resolve distinctions that don't exist at this granularity.
 
 Topic assignment uses a 70% similarity threshold: above it, a message joins an existing cluster;
-below, it starts a new one. Backed by a 27-table schema with 49 indexes.
+below, it starts a new one. Backed by a 27-table schema with 49 indexes and 5 views — three numbers
+describing the shape of one schema, sized for a graph that's queried far more than it's written to.
 
 ## Pipelines as infrastructure
 
@@ -98,8 +106,18 @@ platform's query gateway picks up the declared query operations automatically an
 an MCP tool, so an external LLM can ask "what are people talking about in this group" and get a
 structured answer without anyone writing an endpoint.
 
+Concretely, that's five tools: `semantic_tree_query`, `what_people_are_talking_about`,
+`what_people_care_about`, `what_people_want`, and `user_details`. An external LLM calls
+`what_people_care_about` directly and gets a structured answer back — no bespoke endpoint, no
+schema explanation, because the query operation was already declared as part of the pipeline's
+infrastructure rather than bolted on afterward.
+
 That is the payoff of treating a pipeline as a resource rather than a program: extending the
 system stops requiring a deploy of the system.
+
+The graph isn't only queryable, it's visible: a small Next.js UI reads directly from Postgres and
+renders the social graph, so the end of this pipeline is something a person can look at, not just
+something an agent can ask about.
 
 ## What I'd do differently
 

@@ -5,14 +5,24 @@ import SiteFooter from "@/components/SiteFooter";
 import MotionProvider from "@/components/motion/MotionProvider";
 import Cursor from "@/components/motion/Cursor";
 import ScrollProgress from "@/components/motion/ScrollProgress";
-import SceneCanvas from "@/components/webgl/SceneCanvas";
+import SceneCanvas from "@/components/webgl/SceneCanvasDeferred";
 import RouteTransition from "@/components/motion/RouteTransition";
+import Terminal from "@/components/TerminalDeferred";
 import "@/styles/main.scss";
 
 // One family, three voices. Recursive's MONO axis slides from proportional sans
 // to true monospace, so the reading voice and the terminal voice are the same
 // typeface at different axis positions — and the scroll timeline can animate
 // between them. CASL and slnt are loaded for the same reason.
+//
+// `wght` is absent from this list on purpose — next/font owns the weight axis
+// through its own `weight` option and rejects it here. Omitting `weight`
+// entirely is what keeps the axis variable, and it is: measured ink coverage
+// runs 18044 → 41426 → 55568 px at wght 300 / 800 / 1000.
+//
+// Do not try to verify that by measuring width. Recursive's wght axis does not
+// change advance widths at all, so every geometric probe reports it dead. See
+// HANDOFF §5.11.
 const recursive = Recursive({
   subsets: ["latin"],
   variable: "--font-recursive",
@@ -60,17 +70,13 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+// Dark only — see the note at the top of `styles/main.scss`. Declaring it here
+// too is what stops the browser painting white form controls and scrollbars
+// over a near-black page.
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#100d16" },
-    { media: "(prefers-color-scheme: light)", color: "#f8f6f1" },
-  ],
-  colorScheme: "dark light",
+  themeColor: "#100d16",
+  colorScheme: "dark",
 };
-
-// Runs before first paint so an explicit theme choice never flashes the wrong
-// palette. Kept tiny and dependency-free on purpose; it must not block.
-const NO_FLASH = `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}})();`;
 
 // Arms the reveal start-states before first paint, so animated content doesn't
 // flash in fully-formed and then hide itself once React hydrates.
@@ -90,7 +96,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={recursive.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
         <script dangerouslySetInnerHTML={{ __html: MOTION_ARM }} />
       </head>
       <body>
@@ -102,13 +107,23 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MotionProvider>
           {/* Mounted once, never unmounted — the GPU context has to
               survive navigation, and unmounting a canvas forces it to be
-              lost. Routes push scenes into it through the tunnel. */}
+              lost. Routes push scenes into it through the tunnel.
+
+              Code-split and held until the browser is idle: three.js is 242 KB
+              and building the board is the single largest thing competing with
+              the hero for the main thread. Deferring the *first* mount does not
+              weaken the never-unmount rule. */}
           <SceneCanvas />
           <ScrollProgress />
           <Cursor />
           <SiteHeader />
           <RouteTransition>{children}</RouteTransition>
           <SiteFooter />
+          {/* Last in the tree so its overlay stacks above the footer without
+              needing a z-index arms race. It owns the only global key handler
+              on the site — the backtick opener and the Konami sequence share
+              one listener rather than competing for the same keydowns. */}
+          <Terminal />
         </MotionProvider>
       </body>
     </html>

@@ -9,20 +9,26 @@
 @use 'layout';
 @use 'motion';
 @use 'components';
+// Both last, and in this order: the terminal is an overlay that has to win
+// against everything below it, and the activity strip is a component variant
+// that reads tokens set in 'components'.
+@use 'activity';
+@use 'terminal';
 
-// Theme resolution has three states, and all three have to be handled or the
-// toggle breaks in one direction:
-//   1. no attribute + no OS preference  → dark (our default)
-//   2. no attribute + OS says light     → light
-//   3. explicit data-theme              → wins over both
+// Dark only.
+//
+// The light theme is gone deliberately, not unfinished. Everything that makes
+// this site work — the backlit keyboard, the glass panels, the additive WebGL
+// blending, the measured contrast ratios — is designed against a near-black
+// ground, and each of them needed a separate inversion to survive on paper.
+// That was two designs maintained in parallel for a site whose whole voice is a
+// dark terminal. One palette, one set of decisions, and `prefers-color-scheme`
+// is not consulted at all.
+//
+// Section-level palette inversion (`.invert-scene`, `.invert-crimson`) is
+// unaffected — that is a compositional device, not a theme.
 :root {
+  color-scheme: dark;
   @include tokens.palette-dark;
   @include tokens.structure;
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) { @include tokens.palette-light; }
-}
-
-:root[data-theme='light'] { @include tokens.palette-light; }
-:root[data-theme='dark']  { @include tokens.palette-dark; }

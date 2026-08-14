@@ -14,16 +14,39 @@
   --fs-h1:      #{fn.fs('h1')};
   --fs-display: #{fn.fs('display')};
 
-  // Live axis values. The scroll timeline writes to these, so type weight and
-  // the sans↔mono blend can be driven by scroll progress.
-  --axis-wght: 400;
-  --axis-mono: 0;
-  --axis-casl: 0;
 }
 
+// Live variable-font axes.
+//
+// Registered rather than left as plain custom properties, for two reasons. An
+// unregistered custom property is a *string*, so a transition on it steps from
+// one value to the other with no interpolation — the hover shifts below would
+// snap rather than move. And registration type-checks the value: a bad one
+// falls back to initial-value instead of invalidating the whole
+// font-variation-settings declaration and dropping the element to 400 regular.
+//
+// They inherit, so setting an axis on a section carries to its type.
+@property --axis-wght { syntax: '<number>'; initial-value: 400; inherits: true; }
+@property --axis-mono { syntax: '<number>'; initial-value: 0;   inherits: true; }
+@property --axis-casl { syntax: '<number>'; initial-value: 0;   inherits: true; }
+@property --axis-slnt { syntax: '<number>'; initial-value: 0;   inherits: true; }
+
+// Display type answers to scroll: weight lightens as the reader moves and
+// settles back when they stop, so the page has a pulse rather than a state.
+//
+// Weight only, and that is a measured decision rather than a cautious one.
+// Recursive's wght axis does not change advance widths at all — 'wght' 300 and
+// 'wght' 1000 measure identically at 120px, while ink coverage goes 18044 →
+// 55568 — so a large weight excursion repaints without reflowing, and -120 is
+// safe where it would be reckless in almost any other family.
+//
+// MONO is the opposite and is deliberately NOT driven here: it takes the same
+// string from 788px to 960px, and at a 30rem viewport even a 0.18 shift
+// re-wrapped a heading mid-scroll. Layout shift under the reader's eye is not
+// a texture effect, it's a bug.
 .display,
 .h1, .h2, .h3 {
-  @include mx.recursive($wght: 800);
+  @include mx.recursive($wght: 800, $wght-shift: -120);
   letter-spacing: -0.03em;
   line-height: 0.95;
   text-transform: uppercase;
@@ -62,6 +85,17 @@
   text-transform: uppercase;
   letter-spacing: 0.18em;
   color: var(--ink-faint);
+}
+
+// Interactive type leans under the pointer. Shape-only axes, so nothing moves
+// position — see `axis-hover`.
+.site-nav a,
+.brand,
+.btn,
+.hero__link,
+.work-card__go,
+.post-row__pill {
+  @include mx.axis-hover;
 }
 
 .prose {

@@ -10,17 +10,30 @@ summary: Four questions. None of them are about the model.
 actually ask:
 
 **Can you re-run it?** If a stage fails and you fix it, can you replay from source, or are you
-reasoning about which records got half-processed? Content-hash idempotency makes this a yes. Without
-it, every incident is archaeology.
+reasoning about which records got half-processed? Content-hash idempotency makes this a yes: key
+every write by a hash of its normalized source content and the database becomes a cache you can
+throw away and rebuild. Without it, every incident is archaeology. Note that an exactly-once
+guarantee on your stream doesn't give you this — a correct log and rebuildable derived state are
+different properties.
 
-**Does any state machine have a path backwards?** Values that can move in both directions are values
-every downstream consumer has to defend against. Monotonic state is cacheable state.
+**Does any state machine have a path backwards?** Values that can move in both directions are
+values every downstream consumer has to defend against, and in practice none of them will. A
+four-stage confidence ladder that only ever climbs turns a recursive prerequisite check across
+thirty-one artifact types into a threshold comparison in two queries. Monotonic state is cacheable
+state.
 
 **Is the scaling signal honest or merely available?** CPU is available. On a queue-driven system,
-backlog per worker is honest. Most systems scale on what the platform hands them.
+`messages / running workers` is honest — fifty messages behind ten workers is healthy, fifty behind
+one is an incident, and CPU can't tell you which you're in until minutes after it matters. Most
+systems scale on what the platform hands them.
 
-**What happens to a poison message?** Bounded retries and a dead-letter queue mean a bad input costs
-seconds. Unbounded retries mean it costs money until someone notices.
+**What happens to a poison message?** Three attempts, then a dead-letter queue with two weeks of
+retention, and a bad input costs seconds and leaves evidence. Unbounded retries mean it costs money
+until someone notices, and the evidence is a log line among millions.
+
+A fifth I'd add for anything with tools: the authorization boundary has to sit *below* the model,
+in the executor every tool call passes through, not inside the tools themselves. A model that can
+call a function can also invent its arguments.
 
 None of these are about model choice, prompt quality, or benchmark scores. They're the properties
 that decide whether you can operate the thing at 3am, and they're almost entirely absent from how

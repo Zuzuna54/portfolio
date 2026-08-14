@@ -50,7 +50,10 @@
   transition: background-color var(--dur) var(--ease-out);
 
   &:hover {
-    background: var(--ground-2);
+    background: color-mix(in oklab, var(--ground-2) 62%, transparent);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    backdrop-filter: blur(8px) saturate(140%);
+    border-color: color-mix(in oklab, var(--gold) 45%, var(--line));
     .work-card__go { color: var(--gold); transform: translateX(0.35rem); }
     .work-card__title { color: var(--gold); }
   }
@@ -83,6 +86,12 @@
 
   a { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
   &__name { font-size: var(--fs-h3); color: var(--ink); transition: color var(--dur-fast) var(--ease-out); }
+  a { transition: background-color var(--dur-fast) var(--ease-out); }
+  a:hover {
+    background: color-mix(in oklab, var(--ground-2) 55%, transparent);
+    -webkit-backdrop-filter: blur(6px) saturate(135%);
+    backdrop-filter: blur(6px) saturate(135%);
+  }
   a:hover &__name { color: var(--gold); }
   &__lang { font-size: var(--fs-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; }
   &__blurb { margin-block-start: 0.5rem; color: var(--ink-dim); font-size: var(--fs-small); }
@@ -104,7 +113,12 @@
     align-items: baseline;
   }
 
-  &:hover { .post-row__title { color: var(--gold); } }
+  &:hover {
+    background: color-mix(in oklab, var(--ground-2) 55%, transparent);
+    -webkit-backdrop-filter: blur(6px) saturate(135%);
+    backdrop-filter: blur(6px) saturate(135%);
+    .post-row__title { color: var(--gold); }
+  }
   &__date { color: var(--ink-faint); font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; }
   &__title { transition: color var(--dur-fast) var(--ease-out); }
   &__summary {
@@ -245,7 +259,31 @@
 }
 
 // ---------------------------------------------------------------- timeline
-.timeline { margin-block-start: 3rem; padding-inline: var(--gutter); }
+// The rail lives outside `.shell`, so it never inherited the frosted panel the
+// rest of the page has — and it lands squarely on the lit keyboard, where the
+// keycap glyphs ran straight through the role names and made them unreadable.
+// Same material as `main .shell`, so the page reads as one surface rather than
+// a strip pasted over the hero.
+//
+// Putting `backdrop-filter` on the *pinned* element is safe: it creates a
+// containing block for an element's descendants, and ScrollTrigger fixes
+// `.timeline` itself, whose position resolves against its ancestors. HANDOFF
+// §5.19 is the case where this is NOT safe — an ancestor of something sticky.
+.timeline {
+  margin-block-start: 3rem;
+  padding-inline: var(--gutter);
+  padding-block: clamp(1.4rem, 3vh, 2.4rem);
+  background: color-mix(in oklab, var(--ground) 58%, transparent);
+  border-block: var(--hairline) solid color-mix(in oklab, var(--line) 65%, transparent);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .timeline {
+    -webkit-backdrop-filter: blur(20px) saturate(130%);
+    backdrop-filter: blur(20px) saturate(130%);
+    background: color-mix(in oklab, var(--ground) 22%, transparent);
+  }
+}
 
 // Trailing slack so the final card clears the clip edge rather than ending
 // flush against it. Purely visual; the travel maths no longer depends on it.
@@ -264,6 +302,16 @@
   font-size: var(--fs-h3);
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+}
+
+// The job title, under the employer. Violet rather than dim grey so it reads as
+// a distinct field and not as the first line of the note.
+.timeline__role {
+  margin-block-start: 0.25rem;
+  color: var(--violet);
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .timeline__note {
@@ -308,4 +356,113 @@
 html:not(.motion-on) .through__list li {
   opacity: 1 !important;
   transform: none !important;
+}
+
+// ------------------------------------------------------------------ diagrams
+//
+// Architecture diagrams: SVG, in the DOM, animated on scroll. Styled here
+// rather than inline so they inherit the palette — including inside an inverted
+// section, where every colour token flips and the diagram follows automatically.
+.diagram {
+  margin: clamp(2rem, 5vh, 3.5rem) 0;
+}
+
+.diagram__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.diagram__caption {
+  margin-block-start: 1rem;
+  font-size: var(--fs-small);
+  color: var(--ink-dim);
+  max-width: 68ch;
+  border-inline-start: var(--slab) solid var(--gold);
+  padding-inline-start: 0.9rem;
+}
+
+// Edges are hairlines. They carry structure, not emphasis — the nodes and the
+// travelling pulse do that.
+.diagram__edge {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  stroke-linecap: square;
+}
+
+// Control-plane edges: signal rather than work, so they read as dashed.
+.diagram__edge--signal {
+  stroke: var(--ink-faint);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.25;
+}
+
+.diagram__pulse {
+  fill: var(--gold);
+}
+
+.diagram__node rect {
+  fill: var(--ground-2);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  // Brutalist: hard corners everywhere, including here.
+  rx: 0;
+}
+
+.diagram__label {
+  fill: var(--ink);
+  font-size: 13px;
+  @include mx.recursive($wght: 650);
+}
+
+.diagram__sub {
+  fill: var(--ink-faint);
+  font-size: 10.5px;
+  @include mx.mono(500);
+  letter-spacing: 0.02em;
+}
+
+// Node roles, by what a box actually *is*. Colour carries meaning here rather
+// than decoration: stores are violet, control-plane is gold, surfaces crimson.
+.diagram__node--store rect   { stroke: var(--violet); }
+.diagram__node--queue rect   { stroke: var(--violet); stroke-dasharray: 4 3; }
+.diagram__node--control rect { stroke: var(--gold); }
+.diagram__node--surface rect { stroke: var(--crimson); }
+.diagram__node--io rect      { stroke: var(--ink-faint); }
+
+// Reduced motion: the diagram is content, so it renders complete and static.
+// The scroll animation only ever removes the journey, never the destination.
+@include mx.motion-reduce {
+  .diagram__node,
+  .diagram__edge,
+  .diagram__pulse { opacity: 1 !important; }
+}
+
+// Multiple diagrams per case study, separated so each reads as its own idea.
+.diagrams > .diagram + .diagram {
+  margin-block-start: clamp(3rem, 8vh, 5.5rem);
+  padding-block-start: clamp(2rem, 5vh, 3rem);
+  border-block-start: var(--hairline) solid var(--line);
+}
+
+.diagram__title {
+  margin-block-end: 1rem;
+  color: var(--gold);
+}
+
+// Latency budget bars. Length is time — the point is that you can compare
+// stages without reading a number.
+.diagram__bar {
+  fill: color-mix(in oklab, var(--violet) 40%, transparent);
+  stroke: var(--violet);
+  stroke-width: 1;
+}
+
+// The target sits inside the budget, so the gap between them is visible as
+// headroom rather than stated as a second number.
+.diagram__bar--target {
+  fill: var(--gold);
+  opacity: 0.85;
 }

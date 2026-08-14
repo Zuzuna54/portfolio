@@ -6,22 +6,35 @@ status: scheduled
 summary: I used both, eight months apart, and the difference wasn't budget.
 ---
 
-I've shipped retrieval on 3,072-dimension embeddings and on 384-dimension embeddings. The choice
-had nothing to do with what was affordable.
+I've shipped retrieval on 3,072-dimension embeddings and on 384-dimension embeddings, on two
+different systems, eight months apart. The choice had nothing to do with what was affordable.
 
-The 3,072 system searched long-form conversation — transcript segments, summaries, and derived
-insights, indexed at three different granularities. Queries needed to separate genuinely close
-ideas: an objection about pricing from an objection about procurement. Fine distinctions across
-long text need the room.
+The 3,072 system searched long-form conversation — transcript segments, whole-call summaries, and
+derived insights, indexed at three granularities in one HNSW index so a query can match a passing
+remark or a theme that ran through an hour. Queries needed to separate genuinely close ideas: an
+objection about pricing from an objection about procurement. Fine distinctions across long text
+need the room. Vector search there isn't even the whole answer: it runs alongside a full-text index
+and the merged top-k goes through a reranker — a 3,072-dimension neighbourhood is still a
+neighbourhood, not a ranking.
 
-The 384 system clustered short chat messages into topics at a 70% similarity threshold. Chat
-messages are short and blunt. The distinctions that bigger vectors buy you don't exist at that
-granularity — you'd be paying storage and query time to resolve differences the source text never
+The 384 system clustered short chat messages into topics at a 70% similarity threshold — above it,
+a message joins an existing cluster, below it, it starts a new one. Chat messages are short and
+blunt. The distinctions that bigger vectors buy you don't exist at that granularity, and you'd be
+paying eight times the raw vector storage per row to resolve differences the source text never
 encoded.
 
+A third system sits between them at 1,536 dimensions, one collection per user, cosine distance,
+HNSW tuned at m=16 and ef_construct=100 — conversational memories, longer than a chat line and
+shorter than a call. The pattern holds.
+
+I considered standardizing on one dimension to simplify the embedding client. Rejected it: one size
+serving two workloads with opposite requirements just moves the waste from "which system" to
+"every query on the wrong one."
+
 The heuristic I'd offer: dimension count should track *how much semantic nuance your source text
-actually contains*, not how important the feature is. Long, careful text rewards big vectors. Short,
+actually contains*, not how important the feature is. Long, careful text rewards big vectors, short
 noisy text doesn't.
 
-Getting this wrong in the expensive direction is quiet. Everything works, the index is just several
-times larger and slower than it needed to be, and nobody profiles it because it isn't broken.
+Getting this wrong in the expensive direction is quiet. Everything works, the index is just larger
+and slower than it needed to be, and nobody profiles it because it isn't broken. Getting it wrong
+in the cheap direction is loud but late: you find out at the recall complaint, not the review.

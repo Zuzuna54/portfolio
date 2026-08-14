@@ -7,18 +7,32 @@ diagram: fanout
 summary: Most LLM pipelines can't be re-run. One decision at the storage layer made ours fully replayable and turned Postgres into a disposable cache.
 ---
 
-Most LLM pipelines can't be re-run. Something fails at stage 6, you fix it, and now you're
+Most LLM pipelines can't be re-run. Something fails at stage six, you patch it, and now you're
 reasoning about which records got half-processed.
 
 We made ours fully replayable with one decision: content-hash idempotency at the storage layer.
-Every write is keyed by a hash of its source content. Re-running the pipeline on the same input
-produces byte-identical output.
+Every write is keyed by a hash of its normalized source content, not a generated id. Before
+persisting, a delta check compares that hash against what's already stored for the entity —
+identical hash is a no-op, changed hash writes through. Re-run the same input any number of times
+and the output is byte-identical.
 
-The consequence is that Postgres became disposable. We could wipe the entire database and rebuild
-it from source events, deterministically. Debugging stopped being archaeology.
+The consequence: Postgres became disposable. We could wipe the entire database and rebuild it from
+source events, deterministically. Debugging stopped being archaeology.
 
-The cost: you have to be disciplined about what goes into the hash. Anything non-deterministic —
-timestamps, model temperature, retry counts — has to stay out, or every run looks like a change.
+It's worth being precise about what this is *not*, because the stream layer upstream had its own
+guarantee and the two get confused constantly. That layer kept a persistent, disk-backed state
+store holding the previous content ID for every stream key. Each event reads that pointer, writes a
+node referencing it, and updates the store, so events chain into a content-addressed DAG. Two
+events racing to claim the same predecessor would corrupt the chain of custody, and transactional
+exactly-once semantics are precisely what rules that race out. That makes the *log* correct. It
+says nothing about whether the derived state downstream can be rebuilt from it. Different property,
+and it's easy to buy the first and assume you got the second.
 
-Worth it. In nine months of running this in production, "just replay it" resolved more incidents
-than any dashboard did.
+The cost is discipline. Anything non-deterministic — timestamps, model temperature, retry counts —
+has to stay out of the hash, or every run looks like a change, and it doesn't fail loudly when it
+breaks; it just quietly stops holding. "Content" also only means one thing once you fix a single
+canonical serialization, or two semantically identical payloads hash differently and duplicate
+silently.
+
+Worth it. In nine months of production, "just replay it" resolved more incidents than any
+dashboard did.

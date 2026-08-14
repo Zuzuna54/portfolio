@@ -6,23 +6,32 @@ status: scheduled
 summary: Three things I got right for reasons I couldn't measure, and one I'd rebuild.
 ---
 
-Looking back at a year of building agent platforms, the honest retrospective:
+Nine months of building agent platforms, and the honest retrospective:
 
-**Thresholds I argued for instead of measuring.** The promotion ladder's evidence thresholds were
-chosen by judgment and defended as "conservative". Conservative in which direction, by how much,
-against what outcome? I never instrumented which signals actually influenced a decision. That's a
-week of work I skipped and would now do first.
+**Thresholds I argued for instead of measuring.** The promotion ladder's evidence thresholds —
+three pieces of evidence to reach emerging, five across two conversations for validated, ten across
+three for decision-grade — were chosen by judgment and defended as "conservative". Conservative in
+which direction, by how much, against what outcome? I never instrumented which promoted signals
+actually influenced a decision. That's a week of work I skipped and would now do first.
 
 **Global constants that should have been per-tenant.** A 70% clustering threshold serves the middle
 of a distribution well and the tails poorly. Different communities have genuinely different topic
 density. Per-stream calibration was a day's work.
 
-**Building the expensive path first.** Reprocessing full conversation history is the right default
-and the wrong only option. Correct, and incomplete.
+**Framing a triage problem as a cost problem.** For a long time I argued long-lived memory as a
+choice between keeping a window and reprocessing everything — lossy versus expensive. Both sort on
+recency. The design that actually works sorts on whether a memory earned its place: episodic
+memory decays on a 30/90/180-day schedule by domain, and anything accessed more than three times,
+above 0.8 confidence, older than a week gets promoted into a permanent graph and stops decaying at
+all. The raw log ages out; the fact it produced doesn't. Getting there took longer than it should
+have, because I spent months optimizing inside a question that had the wrong axis in it — and the
+promotion bar I landed on is itself still a global constant, which is the second regret wearing a
+different hat.
 
 What I'd keep without hesitation: fan out the reads and serialize the writes; make everything
 replayable before making anything fast; and pick the scaling signal that's honest rather than the
 one that's available.
 
-The pattern across all four regrets is the same. Every one is a place I made a defensible decision
-and then didn't build the measurement that would have told me whether it was right.
+The pattern in the first two is the same — a defensible decision, and no instrument that would have
+told me whether it was right. The third is quieter and worse. I optimized hard inside a framing I
+never stopped to question, and no amount of measurement inside that framing would have caught it.

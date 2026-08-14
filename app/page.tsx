@@ -8,16 +8,30 @@ import HorizontalRail from "@/components/motion/HorizontalRail";
 import InvertScene from "@/components/motion/InvertScene";
 import PinnedScene from "@/components/motion/PinnedScene";
 import HeroDrivers from "@/components/webgl/HeroDrivers";
+import Scramble from "@/components/motion/Scramble";
+import ClipReveal from "@/components/motion/ClipReveal";
 
-const TIMELINE: { year: string; what: string; note: string }[] = [
-  { year: "2017", what: "Biz2Credit", note: "Monolith to microservices. React and Redux frontends. The ordinary work that teaches you what breaks." },
-  { year: "2019", what: "StoreTasker", note: "A proxy layer for request capture, and leading the move to React and Node." },
-  { year: "2021", what: "Genentech", note: "ML platform tooling in biotech — a model-federation dashboard and the training topology as an interactive graph." },
-  { year: "2023", what: "Scale AI", note: "Prompt strategies and evaluation loops for LLM output quality." },
-  { year: "2024", what: "YellowPad", note: "Founding engineer at a legal-AI startup. Platform from zero, 2,000 users, SOC 2 Type 2." },
-  { year: "2025", what: "Agent platforms", note: "A ten-agent replayable pipeline, then a multi-tenant conversation-intelligence platform." },
-  { year: "2025", what: "Sunny Labs", note: "My own company. Custom hardware, four memory layers, a voice loop under half a second." },
+// Years, employers and titles here must match `app/resume/page.tsx` exactly —
+// a recruiter reads both pages in the same sitting, and a date that moves
+// between them is the kind of thing that becomes the interview.
+//
+// Employers are named (owner's decision, 14 Aug). Products, clients and
+// internals are not, and the denylist still enforces that half.
+const TIMELINE: { year: string; what: string; role: string; note: string }[] = [
+  { year: "2017", what: "Biz2Credit", role: "Software Engineer", note: "Monolith to microservices. React and Redux frontends. The ordinary work that teaches you what breaks." },
+  { year: "2019", what: "StoreTasker", role: "Software Engineer", note: "A Ruby proxy layer for request capture, and leading the move to React and Node." },
+  { year: "2021", what: "Genentech", role: "Software Engineer", note: "ML platform tooling in biotech — a model-federation dashboard and the training topology as an interactive graph." },
+  { year: "2023", what: "Remotasks (Scale AI)", role: "NLP & Prompt Engineering", note: "Prompt strategies and evaluation loops for LLM output quality." },
+  { year: "2024", what: "YellowPad", role: "Founding Engineer", note: "Legal-AI startup. Platform from zero, 2,000 users, SOC 2 Type 2." },
+  { year: "2025", what: "Cere Network", role: "Senior Software Engineer", note: "A ten-agent replayable NLP pipeline on a Substrate-backed decentralized data platform." },
+  { year: "2025", what: "Builders Studio", role: "Senior Platform Engineer", note: "A multi-tenant conversation-intelligence platform — nine queue-driven workers, retrieval, and an MCP server." },
+  { year: "2025", what: "Sunny Labs", role: "Founder & Principal Engineer", note: "My own company. Custom hardware, three memory tiers, a voice loop tuned to a 520ms target." },
 ];
+
+// Counted from the content directory rather than written down. See the note in
+// app/work/page.tsx — two surfaces shipped a stale count once already.
+const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+const WORK_COUNT = WORDS[getWork().length] ?? String(getWork().length);
 
 export default function Home() {
   const work = getWork();
@@ -66,9 +80,11 @@ export default function Home() {
       <hr className="rule rule--accent" />
 
       <section className="section shell">
-        <p className="eyebrow">Selected work</p>
+        <Scramble as="p" className="eyebrow">Selected work</Scramble>
+        {/* Counted from the content directory — see the note in app/work/page.tsx.
+            This heading read "Three systems" for a while after a fourth shipped. */}
         <SplitReveal as="h2" className="h1" scrub>
-          Three systems
+          {`${WORK_COUNT[0].toUpperCase()}${WORK_COUNT.slice(1)} systems`}
         </SplitReveal>
       </section>
 
@@ -76,7 +92,7 @@ export default function Home() {
         <ul className="work-list" role="list">
           {work.map((d, i) => (
             <li key={d.meta.slug}>
-              <Reveal from="up" delay={i * 0.05}>
+              <ClipReveal from="left">
                 <Link href={`/work/${d.meta.slug}`} className="work-card">
                   <span className="work-card__meta mono">
                     {d.meta.role} · {d.meta.period}
@@ -93,7 +109,7 @@ export default function Home() {
                   </span>
                   <span className="work-card__go mono">Read the teardown →</span>
                 </Link>
-              </Reveal>
+              </ClipReveal>
             </li>
           ))}
         </ul>
@@ -107,7 +123,7 @@ export default function Home() {
             scrolling back genuinely un-reveals them. */}
         <PinnedScene length={1.6} className="through">
           <div className="shell">
-            <p className="eyebrow">The through-line</p>
+            <Scramble as="p" className="eyebrow">The through-line</Scramble>
             <SplitReveal as="h2" className="h1">
               Systems you can operate, not just demo
             </SplitReveal>
@@ -141,6 +157,7 @@ export default function Home() {
             <article className="rail__item timeline__card" key={`${t.year}-${t.what}`}>
               <p className="timeline__year mono">{t.year}</p>
               <h3 className="h3">{t.what}</h3>
+              <p className="timeline__role mono">{t.role}</p>
               <p className="timeline__note">{t.note}</p>
             </article>
           ))}

@@ -1,0 +1,134 @@
+---
+title: A blockchain that only stores who, not what
+kicker: Five pallets for identity, everything else off-chain
+role: Senior Software Engineer
+period: Apr 2025 – Oct 2025
+order: 3
+diagram: platform
+encumbered: true
+problem: A decentralized storage network needed every byte attributable and tamper-evident without a central authority — and needed the chain to never become the bottleneck for a high-volume data path.
+summary: >
+  A Substrate-based chain paired with an off-chain, content-addressed storage layer: a permissioned
+  network of staked storage and CDN nodes holding the actual data, with the chain itself holding only
+  registry state — node identities, clusters, customer accounts, staking, governance — across five
+  custom runtime pallets. I built the NLP vertical on top of this platform (a separate case study on
+  this site); the chain, the pallets, the ingestion gateway, and the query gateway were built by the
+  protocol team. What follows is the platform substrate I integrated against closely enough to draw
+  accurately: a signed-event ingestion pipeline where every client signs with an on-chain key before
+  anything is admitted, a Kafka Streams topology that chains events into a content-addressed DAG with
+  exactly-once semantics, and — the pattern I find most interesting in the whole stack — pipelines
+  declared as infrastructure-as-code over four custom resource types, so a new vertical ships as a
+  Terraform stack file and is exposed to LLMs as MCP tools automatically, without a single line of
+  platform code changing.
+metrics:
+  - { value: "5", label: "custom runtime pallets" }
+  - { value: "15", label: "sub-repos, one platform" }
+  - { value: "4", label: "IaC resource types" }
+  - { value: "ed25519", label: "signed at the client" }
+  - { value: "1×", label: "exactly-once DAG write" }
+  - { value: "0", label: "code changes per vertical" }
+stack:
+  - TypeScript
+  - Rust (adjacent — pallets)
+  - Kafka Streams
+  - Substrate / Polkadot SDK
+  - CDKTF
+  - Terraform
+  - Elasticsearch
+  - PostgreSQL
+  - MCP
+---
+
+## The problem
+
+A decentralized storage network has two things to prove: that every piece of data can be attributed
+to whoever put it there, and that nobody — including the network's own operators — can quietly swap
+it for something else. Neither of those is a data-modeling problem. They're an identity and integrity
+problem, and the chain exists to solve exactly that and nothing more.
+
+The mistake this platform's design avoids is putting the data itself on-chain. A blockchain that has
+to hold every payload becomes exactly as slow as its slowest consensus round, for every write, forever.
+This one doesn't make that mistake.
+
+## The chain holds identity, not data
+
+Five custom runtime pallets — Rust modules inside a Substrate runtime, not Solidity contracts, since
+this is a Substrate-based chain rather than an Ethereum-style one — form the entire on-chain surface:
+node identities and endpoints, cluster membership, customer accounts and bucket ownership, operator
+staking and rewards, and cluster governance. That's it. No event payloads, no model weights, no NLP
+graph state.
+
+The actual bytes live off-chain, in a permissioned network of staked storage and CDN nodes, addressed
+by content hash rather than location. A file's identity *is* its hash — tamper with it and you get a
+different CID, which means integrity checking doesn't require trusting the node serving the file, only
+recomputing a hash. Operators stake a token to participate and get slashed if the content they're
+supposed to be serving doesn't match its registered CID. The chain enforces the economic incentive;
+the storage nodes hold the weight.
+
+That split — cheap, trustless coordination on-chain, cheap, scalable storage off-chain, two systems
+kept consistent by content addressing rather than by a shared database — is the one decision that
+makes the rest of the platform's throughput possible.
+
+## Every event is signed before it exists downstream
+
+Nothing reaches the platform unsigned. A client SDK signs every event with an ed25519 or sr25519 key
+tied to an on-chain account before it ever reaches a gateway — forgery is cryptographically prevented
+at the source, not filtered for after ingestion. The gateway's only chain interaction on this path is
+a read: confirming the signer is a known account. It never writes here, which is what keeps signature
+verification from becoming a bottleneck against consensus on the hot ingestion path.
+
+Two gateway implementations run in parallel while a Go rewrite replaces the legacy NestJS one — the
+newer service unifies signature verification, envelope encryption of the payload, and downstream
+routing into a single binary. That kind of live migration, where the old and new paths run side by
+side rather than a hard cutover, is the boring but correct way to replace a piece of infrastructure
+that can't have downtime.
+
+## The stream is the source of truth until it's a DAG
+
+Signed events land in Kafka, partitioned per source application, and a Kafka Streams topology turns
+them into a content-addressed DAG: a persistent, RocksDB-backed state store holds the previous content
+ID for every stream key, so each new event reads that pointer, writes a new node referencing it, and
+updates the store. Two events racing to claim the same "previous CID" would corrupt the chain of
+custody for that data — and Kafka's transactional exactly-once semantics are specifically what rules
+that race out. It's a genuinely stateful stream-processing problem, which is why it's built on Kafka
+Streams rather than a plain consumer or a separate engine like Flink: the state store ships inside the
+same JVM as the topology, with no second cluster to operate.
+
+The same fan-out point branches into an independent rule-matching path that dispatches downstream
+agents — it reads the same topics without gating on the DAG write completing, so a slow storage write
+never blocks rule evaluation.
+
+## Pipelines are infrastructure, not services
+
+The part of this platform I'd point to first if someone asked what's actually novel here: pipelines
+are declared, not coded. Four custom Terraform resource types — a `Stream` (an ingestion endpoint), a
+`Raft` (an indexing-and-query primitive attached to a stream, with its own indexing script and declared
+query operations — a name that collides with the Raft consensus algorithm and means something entirely
+different here, worth stating explicitly), an `Agent` (a processing capability with JSON-schema'd
+tasks), and an `Engagement` (campaign configuration) — let a team declare a new pipeline as a CDKTF
+stack file and `cdktf deploy` it into existence. No backend service gets recompiled.
+
+The payoff compounds at the query layer: the moment a `Raft`'s query operations deploy, the platform's
+MCP gateway exposes each one as a tool automatically. An LLM client can call it without anyone writing
+an endpoint. That's what let a completely separate team ship an unrelated computer-vision vertical on
+this same platform without touching a line of the platform's own code — the NLP vertical I built (see
+the other case study) is one tenant of this pattern, not a special case of it.
+
+## What I actually built here
+
+To be precise about scope, since the platform above is large and I didn't build most of it: my work
+was the NLP vertical — a ten-agent pipeline consuming this platform's signed events, provisioned as a
+`Stream` + `Raft` + `Agent` composition through exactly the infrastructure-as-code pattern described
+above. Everything in this case study above that line — the chain, the pallets, the signed-SDK gateway,
+the Kafka Streams DAG, the Terraform provider and runtime that make `Raft` and `Agent` real — was built
+by the protocol team. I integrated against it, read the implementation closely enough to draw it
+accurately, and designed my vertical to fit its primitives rather than work around them.
+
+## What I'd do differently
+
+The two-gateway migration (legacy NestJS running alongside the Go rewrite) is the right way to replace
+infrastructure without downtime, but it leaves a window where two services can disagree about what
+"verified" means if the signature-checking logic drifts between them. I'd have wanted a shared
+conformance test suite run against both gateways from day one of the migration, rather than trusting
+manual review to catch drift — that's a gap I noticed as a downstream consumer, not one I was
+positioned to fix, but it's the thing I'd flag first if asked to harden this further.

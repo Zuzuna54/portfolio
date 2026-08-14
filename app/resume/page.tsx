@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CONTACT } from "@/lib/site";
+import GridReveal from "@/components/motion/GridReveal";
 
 export const metadata: Metadata = {
   title: "Résumé",
@@ -11,43 +12,50 @@ type Role = {
   title: string;
   period: string;
   bullets: string[];
+  // Optional, terse technology attribution for roles where distinctive tech
+  // doesn't fold naturally into achievement-bullet prose (e.g. adjacent
+  // systems that were integrated against rather than built).
+  stack?: string;
 };
 
-// Two employers are withheld on the public page. Employment history is not itself
-// confidential — it's on LinkedIn — but the choice was to name no employer anywhere
-// public, and a page that names the company directly above a description of its
-// internal architecture is exactly the pairing that creates exposure.
+// Every employer is named (owner's decision, 14 Aug, under written approval).
+// Employment history is not confidential — it is on LinkedIn and verified by any
+// background check, so withholding it here bought nothing a recruiter couldn't
+// resolve in one search.
 //
-// The downloadable PDF is the artifact that names them: it goes to a named recruiter
-// rather than to a search index. That split is deliberate, not an oversight.
+// What stays redacted is the layer that actually carries exposure, and the
+// denylist still enforces it: product names, client names, internal package and
+// file paths, instance types and regions. The line is employer-yes,
+// product-and-internals-no — which is the pairing the confidentiality clause is
+// actually about. Do not relax that half without asking.
 const ROLES: Role[] = [
   {
     company: "Sunny Labs Inc.",
     title: "Founder & Principal Engineer",
     period: "Aug 2025 – Present",
     bullets: [
-      "Architected an AI companion platform end to end: custom ESP32-S3 hardware, a multi-layer memory system, and a multi-tenant cloud backend licensed as a white-label platform to third-party brands.",
-      "Built four memory layers across Redis, PostgreSQL and a graph store — short-term context, episodic facts, emotional state, and a long-term relationship graph. Every session reprocesses full prior history rather than a retention window, so recall does not degrade as the window slides.",
-      "Built a streaming voice pipeline (streaming STT → LLM → custom TTS) holding under 500ms for real-time dialogue.",
-      "Enforced per-device memory isolation across licensed brands with PostgreSQL row-level security. Hardware went from concept to first functional module in under four weeks.",
+      "Architected an AI companion platform end to end in Rust (tokio, axum, tonic): custom ESP32-S3 hardware, a three-tier memory system, and a multi-tenant cloud backend licensed as a white-label platform to third-party brands.",
+      "Built three memory tiers queried in parallel every turn — Redis for session state and hot facts (<5ms), Qdrant for episodic, semantic and emotional memory ranked by similarity (<50ms), and an Amazon Neptune knowledge graph for entities and relationships (<150ms). Episodic memories decay on a 30/90/180-day schedule by domain; anything accessed repeatedly and high-confidence is promoted into the permanent graph.",
+      "Built a streaming voice pipeline (streaming STT → LLM → custom TTS) tuned to a 520ms latency target against an 800ms hard budget, with self-hosted LLM, embedding and emotion-model inference on AWS SageMaker (Inferentia/Trainium) behind a trait-based provider abstraction with multi-AZ failover.",
+      "Enforced per-child memory isolation across licensed brands with a separate Qdrant collection and a separate Neptune subgraph per child. Internal services communicate over gRPC/tonic, with WebSocket binary framing for the real-time audio protocol and OpenTelemetry/X-Ray tracing across the critical path.",
     ],
   },
   {
-    company: "Venture studio (name withheld)",
+    company: "Builders Studio",
     title: "Senior Platform Engineer",
-    period: "Nov 2025 – Apr 2026",
+    period: "Nov 2025 – Jul 2026",
     bullets: [
       "Architected a multi-tenant conversation-intelligence platform converting ~100 hours of calls a week into structured business intelligence for several teams.",
       "Built a 9-worker, queue-driven pipeline across 7 queues with 7 dead-letter queues, bounded retries, and a shared concurrent message-pool library as the reliability backbone.",
       "Designed a 4-stage signal promotion ladder that never demotes, lifting per-call learnings into cross-call signals and 31 prerequisite-chained artifact types evaluated in 2 database queries.",
       "Built retrieval over 3,072-dimension embeddings in pgvector across transcript segments, summaries and reflection insights.",
       "Shipped a chat assistant with a 24-tool function-calling registry using thinking-token streaming and parallel tool dispatch over SSE, plus an MCP server exposing the intelligence layer to external agents.",
-      "Guaranteed tenant isolation via PostgreSQL row-level security in a single-deployment architecture, with all infrastructure as code at full dev/prod parity.",
+      "Guaranteed tenant isolation via PostgreSQL row-level security over a 50+ model Prisma schema in a single-deployment architecture, with all infrastructure as code at full dev/prod parity.",
       "Cut compute cost ~94% by moving off per-task serverless containers to 3 EC2 capacity providers tuned per workload shape, autoscaled on queue backlog per task rather than CPU.",
     ],
   },
   {
-    company: "Decentralized data platform (name withheld)",
+    company: "Cere Network",
     title: "Senior Software Engineer",
     period: "Apr 2025 – Oct 2025",
     bullets: [
@@ -55,8 +63,11 @@ const ROLES: Role[] = [
       "Implemented content-hash idempotency making the pipeline fully replayable — Postgres can be wiped and rebuilt from source events with identical output.",
       "Built semantic retrieval over 384-dimension embeddings in pgvector with dynamic topic clustering at a 70% similarity threshold, over a 27-table schema with 49 indexes.",
       "Exposed 5 query operations as MCP tools through the platform gateway, making the social graph directly queryable by external LLMs.",
-      "Declared pipelines as infrastructure-as-code over custom resource types, so a new pipeline ships as a stack file and deploys without recompiling any backend service.",
+      "Declared pipelines as infrastructure-as-code (CDKTF, custom resource types), so a new pipeline ships as a stack file and deploys without recompiling any backend service.",
+      "Integrated the NLP vertical against a Substrate-based chain (five custom runtime pallets) and a signed-event ingestion pipeline — ed25519/sr25519 client signing, content-addressed storage — consuming from the same Kafka Streams topics and RocksDB-backed state store the platform's stream-ETL layer runs on.",
     ],
+    stack:
+      "Also read and integrated directly against, without owning: Go (the platform's unified ingestion/compute engine), Kotlin (Quarkus webhook service, Kafka Streams ETL topology).",
   },
   {
     company: "YellowPad",
@@ -88,29 +99,63 @@ const ROLES: Role[] = [
       "Built full-stack applications (React/Redux, Java/Vert.x, Node.js, GraphQL) deployed on AWS with Docker and Kubernetes.",
     ],
   },
+  // These two were missing, and their absence was load-bearing: the page claims
+  // nine years while the roles above only span 2021–2026. A reader who counts —
+  // and a recruiter does — finds five. Both are on the home-page timeline and in
+  // the master résumé; only this page had dropped them.
+  {
+    company: "StoreTasker",
+    title: "Software Engineer",
+    period: "Jul 2019 – Jul 2021",
+    bullets: [
+      "Built a Ruby proxy layer for frontend request capture and third-party integration, and led the team's adoption of React and Node.js.",
+    ],
+  },
+  {
+    company: "Biz2Credit",
+    title: "Software Engineer",
+    period: "Jul 2017 – Jul 2019",
+    bullets: [
+      "Contributed to a monolith-to-microservices migration (Node.js/Express, Ruby on Rails), built React/Redux/TypeScript frontends, and deployed serverless services on AWS Lambda.",
+    ],
+  },
 ];
 
 const SKILLS: [string, string][] = [
   [
     "AI & LLM systems",
-    "Multi-agent orchestration, agentic workflows, agent runtimes, RAG pipelines, vector search (pgvector), embeddings, semantic clustering, MCP servers, streaming STT/TTS, prompt versioning, LLM observability, cost and latency optimization",
+    "Multi-agent orchestration, agentic workflows, agent runtimes, RAG pipelines, vector search (pgvector, Qdrant), embeddings, semantic clustering, MCP servers (client + server), streaming STT/TTS, self-hosted inference (AWS SageMaker, Inferentia/Trainium, AWS Neuron SDK), prompt versioning, LLM observability (OpenTelemetry, AWS X-Ray), cost and latency optimization",
   ],
   [
     "Cloud & infrastructure",
-    "AWS (ECS, SQS, Lambda, S3, RDS, AppSync, CloudWatch, ECR, EC2, VPC, CloudFront), Pulumi, CDKTF, Docker, Kubernetes, GitHub Actions, GCP",
+    "AWS (ECS on EC2, SQS, Lambda, S3, RDS, SageMaker, ElastiCache, Neptune, AppSync, CloudWatch, X-Ray, Route 53, WAF, Secrets Manager, ECR, EC2, VPC, CloudFront), CDKTF (incl. authoring custom Terraform providers), Pulumi, Docker, Kubernetes, GitHub Actions, GCP",
   ],
   [
     "Data",
-    "PostgreSQL 17 (row-level security, pgvector), Redis, FalkorDB, Neo4j, DynamoDB, MongoDB, Elasticsearch, Kafka, Prisma, TypeORM",
+    "PostgreSQL (row-level security, pgvector), Redis, Qdrant, Neo4j, Amazon Neptune, DynamoDB, MongoDB, Elasticsearch, Kafka (incl. Kafka Streams), RocksDB, Prisma, TypeORM",
   ],
-  ["Languages", "TypeScript, JavaScript, Python, C/C++ (embedded firmware), Java, SQL, Cypher"],
-  ["Backend & API", "Node.js, Express, FastAPI, GraphQL, AppSync, Flask, Vert.x"],
+  [
+    "Languages",
+    "Rust (tokio, axum, tonic), TypeScript, JavaScript, Python, Go, Kotlin, Java, Ruby, SQL, Cypher/openCypher, C/C++ (embedded firmware)",
+  ],
+  [
+    "Backend & API",
+    "Node.js, NestJS, Express, axum, tonic (gRPC), tokio, FastAPI, GraphQL, AppSync, Flask, Vert.x, WebSocket protocols, JSON-RPC",
+  ],
+  [
+    "Protocols & cryptography",
+    "ed25519/sr25519 signing, Curve25519, content-addressed storage (CID), Substrate/Polkadot SDK (integration), HMAC request signing",
+  ],
   ["Frontend", "React, Next.js, React Native, Redux, Tailwind, D3.js"],
 ];
 
 export default function Resume() {
   return (
     <main id="main">
+      <GridReveal
+        rules="hr"
+        rows=".resume-role, .resume-role__bullets li, .skills li, .resume-head p"
+      >
       <section className="section shell">
         <div className="resume-head">
           <div>
@@ -130,9 +175,10 @@ export default function Resume() {
         <p>
           Senior AI platform engineer with nine years building production systems, specialised in
           LLM and agent infrastructure. Architect of multi-tenant conversation-intelligence and
-          multi-agent orchestration platforms. Depth in agent runtimes, retrieval-augmented
-          generation over pgvector, streaming voice pipelines, multi-tenant data isolation, and
-          infrastructure-as-code on AWS.
+          multi-agent orchestration platforms, and of a Rust-based cloud backend for real-time
+          voice AI. Depth in agent runtimes, retrieval-augmented generation over vector search,
+          streaming voice pipelines, multi-tenant data isolation, and infrastructure-as-code on
+          AWS.
         </p>
       </section>
 
@@ -154,6 +200,15 @@ export default function Resume() {
                 <li key={i}>{b}</li>
               ))}
             </ul>
+            {r.stack && (
+              // Not part of the GridReveal `rows` selector above, so it is
+              // never subject to the reveal animation and is always visible
+              // — no risk of the opacity-0/never-fires bug this page has
+              // already shipped once.
+              <p className="mono resume-role__meta" style={{ marginBlockStart: "0.6rem" }}>
+                {r.stack}
+              </p>
+            )}
           </article>
         ))}
       </section>
@@ -187,6 +242,7 @@ export default function Resume() {
           </div>
         </dl>
       </section>
+    </GridReveal>
     </main>
   );
 }

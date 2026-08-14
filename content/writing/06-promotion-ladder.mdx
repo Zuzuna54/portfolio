@@ -8,20 +8,32 @@ summary: Monotonicity turned a graph traversal into a threshold comparison, and 
 
 We extracted claims from conversations and needed to say how confident we were in each one.
 
-The model is a four-stage ladder — candidate, emerging, validated, decision-grade — with evidence
+The ladder sits in the middle of a three-layer model: learnings, per-conversation insights pulled
+out of a transcript with evidence rows pointing back at the exact segments; signals, the same
+insight once it recurs across conversations, clustered by cosine similarity; and artifacts,
+thirty-one generated documents that only exist once their prerequisite signals do. Everything
+downstream of transcription exists to move a fact from the first layer to the third.
+
+The ladder is four stages — candidate, emerging, validated, decision-grade — with evidence
 thresholds between them: three pieces to reach emerging, five across two distinct conversations to
 reach validated, ten across three for decision-grade.
 
 The constraint that made it work: **signals never demote.** There is no path back down.
 
-That sounds like a limitation. It is the feature. It means a stage is a fact about evidence
-accumulated, not a value that can flap between runs as clustering shifts underneath it. Every
-downstream consumer — gating, tools, dashboards — can cache against a stage and trust it.
+That sounds like a limitation. It is the feature. A stage becomes a fact about evidence
+accumulated, not a value that flaps between runs as clustering shifts underneath it, so every
+downstream consumer — gating, tools, dashboards — can cache against it and trust it. It also
+collapsed a graph problem into arithmetic: once stages only ever increase, "are this artifact's
+prerequisites met" is a threshold comparison answerable in two queries, not a recursive traversal
+over a prerequisite chain.
 
-It also collapsed a graph problem into arithmetic. Thirty-one artifact types were chained by
-prerequisite. If stages only ever increase, "are this artifact's prerequisites met" is a threshold
-comparison you can answer in two queries, not a recursive traversal.
+The thresholds live in a pure-logic package with no database and no environment, shared by the
+worker, the app and the tests — one place to change a number.
 
-The thresholds are deliberately conservative, because a false positive misleads someone and a false
-negative just means something hasn't generated yet. Those costs aren't symmetric, so the thresholds
-aren't either.
+The cost cuts the same way the benefit does: a signal promoted on evidence that later turns out
+wrong has no path back down either. We accepted that because the thresholds are deliberately
+conservative — a false positive misleads someone, a false negative just means something hasn't
+generated yet, and those costs aren't symmetric. Instead of a demotion path we kept an audit log
+recording every promotion and its triggering evidence, so a wrong signal can at least be explained.
+Clustering isn't perfectly deterministic either — nearest-neighbour ties break on row order —
+tolerable only because the thresholds absorb a shift that small.

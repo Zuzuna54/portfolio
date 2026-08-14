@@ -11,15 +11,32 @@ Ten agents processing the same batch in parallel. How do you stop them corruptin
 
 The answer we landed on is old: fan out reads, single-writer for state changes.
 
-Seven model-backed agents — sentiment, embedding, toxicity, spam, emoji, topic, relationship —
-each make exactly one model call per batch and return a result. They're stateless, so they
-parallelize perfectly. None of them touches the graph.
+Before the fan-out even runs, a Redis-only batching layer collects incoming messages until a size
+threshold or timeout fires. That step is why ten parallel model calls are affordable at all —
+you're paying one call per agent per batch, not per message. The story usually gets told starting
+at "ten agents read the same batch," which quietly skips the part that makes the economics work.
 
-One coordinator agent merges every result into the shared graph. Single writer. No locks, no
-partial merges, no ordering bugs at 3am.
+Seven model-backed agents — sentiment, embedding at 384 dimensions, toxicity, spam, emoji, topic
+clustering at a 70% similarity threshold, relationship inference — each make exactly one model call
+per batch and return a result. Stateless, so they parallelize perfectly, and an eighth costs
+nothing conceptually.
 
-The instinct with agent systems is to let each agent own its slice of state. It feels more
-autonomous. It also means every new agent multiplies the number of interleavings you have to
-reason about.
+Three more agents split the rest: one merges every result into the shared graph, one maintains the
+vector index, one assembles context for the query layer downstream. Only the first writes.
+Everyone else reads, or stays out of the graph entirely.
+
+Single writer. No locks, no partial merges, no ordering bugs at 3am. The graph is scoped to one
+batch and discarded once persisted, so a bad batch can't poison the next one, and memory stays
+bounded no matter how long the pipeline runs.
+
+The persistence step behind the writer is three components, not one: a delta detector doing
+content-hash idempotency, a normalized entity writer, and a serializer that snapshots the whole
+graph as a blob. Normalized rows for querying, a snapshot for replay — the same state written
+twice, on purpose.
+
+The instinct with agent systems is to let each own its slice of state. It feels more autonomous. It
+also means every new agent multiplies the interleavings you have to reason about, and failures show
+up as corrupted relationships at 3am, not a stack trace. The cost of the single writer is that it
+is a serialization point: it cannot be scaled by adding another one.
 
 Autonomy in the reads. Serialization in the writes.

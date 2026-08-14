@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getWriting } from "@/lib/content";
+import Scramble from "@/components/motion/Scramble";
 
 export const metadata: Metadata = {
   title: "Writing",
@@ -41,7 +42,7 @@ export default function WritingIndex() {
                     </time>
                     {upcoming && <span className="post-row__pill">scheduled</span>}
                   </span>
-                  <span className="post-row__title h3">{p.meta.title}</span>
+                  <Scramble as="span" className="post-row__title h3">{p.meta.title}</Scramble>
                   <span className="post-row__summary">{p.meta.summary}</span>
                 </Link>
               </li>

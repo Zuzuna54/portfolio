@@ -219,6 +219,7 @@ npm run dev          # http://localhost:3000
 | `npm run redact` | The confidentiality gate. Exits non-zero on a hit. |
 | `npm run check` | `redact` → `tsc --noEmit` → `build`. The gate before anything ships. |
 | `npm run resume:pdf` | Regenerate `public/resume.pdf` from `/resume`. Needs Chrome; set `CHROME=` if it isn't at the default macOS path. |
+| `npm run indexnow` | Ping IndexNow with the sitemap's URLs. No-ops without `INDEXNOW_KEY`. Google doesn't support the protocol; Bing does, and Bing is the index ChatGPT Search runs on. |
 
 `npm run redact` warns and exits 0 rather than failing if the gate isn't present,
 so a clean checkout still builds. Set `REDACT_GATE` to point at `redact-check.sh`

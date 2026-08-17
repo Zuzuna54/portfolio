@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getWork, getWriting } from "@/lib/content";
+import { monthLabel } from "@/lib/dates";
 import { CONTACT, SUMMARY } from "@/lib/site";
 import SplitReveal from "@/components/motion/SplitReveal";
 import Reveal from "@/components/motion/Reveal";
@@ -41,10 +42,14 @@ export const metadata: Metadata = {
 // app/work/page.tsx — two surfaces shipped a stale count once already.
 const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
 const WORK_COUNT = WORDS[getWork().length] ?? String(getWork().length);
+const POST_COUNT = getWriting().length;
 
 export default function Home() {
   const work = getWork();
-  const latest = getWriting().slice(0, 4);
+  // Genuinely the latest now. Under the old ascending-by-`n` sort this took the
+  // four *oldest* posts while calling them `latest`.
+  const posts = getWriting();
+  const latest = posts.slice(0, 4);
 
   return (
     <main id="main">
@@ -182,14 +187,9 @@ export default function Home() {
           {latest.map((p) => (
             <li key={p.meta.slug}>
               <Link href={`/writing/${p.meta.slug}`} className="post-row">
-                <span className="post-row__date mono">
-                  <span className="post-row__n">{String(p.meta.n).padStart(2, "0")}</span>
-                  <time dateTime={p.meta.date}>
-                    {new Date(p.meta.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </time>
+                <span className="post-row__when mono">
+                  <span className="post-row__system">{p.meta.system}</span>
+                  <span className="post-row__worked">{monthLabel(p.meta.worked)}</span>
                 </span>
                 <span className="post-row__title h3">{p.meta.title}</span>
                 <span className="post-row__summary">{p.meta.summary}</span>
@@ -198,8 +198,10 @@ export default function Home() {
           ))}
         </ul>
         <p style={{ marginBlockStart: "2rem" }}>
+          {/* Counted. This was the last hardcoded content count on the site, in
+              a codebase that derives every other one. */}
           <Link href="/writing" className="mono hero__link">
-            All 16 →
+            All {POST_COUNT} →
           </Link>
         </p>
       </section>

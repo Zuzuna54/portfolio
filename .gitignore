@@ -43,3 +43,7 @@ next-env.d.ts
 # Internal engineering companion doc. Stays local: it documents confidentiality
 # obligations and a local clone of an employer private repo. This repo is public.
 HANDOFF.md
+
+# Local path to the redaction scanner. Untracked: this repo is public and the
+# path points at tooling that is not.
+.redact-gate

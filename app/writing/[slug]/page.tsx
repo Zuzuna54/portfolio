@@ -5,6 +5,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 import Byline from "@/components/Byline";
 import ArticleSchema from "@/components/ArticleSchema";
 import { getWriting, getWritingBySlug } from "@/lib/content";
+import { monthLabel } from "@/lib/dates";
 
 export function generateStaticParams() {
   return getWriting().map((p) => ({ slug: p.meta.slug }));
@@ -54,13 +55,18 @@ export default async function WritingDetail({ params }: PageProps<"/writing/[slu
         datePublished={doc.meta.date}
       />
       <article className="section shell--narrow shell">
-        <p className="eyebrow">Note {String(doc.meta.n).padStart(2, "0")}</p>
+        {/* The system and the month it was built. This replaced "Note 07" — a
+            queue position tells a reader nothing; the system and the date tell
+            them what they came for. */}
+        <p className="eyebrow">
+          {doc.meta.system} · {monthLabel(doc.meta.worked)}
+        </p>
         <h1 className="h1" style={{ marginBlockStart: "0.75rem" }}>
           {doc.meta.title}
         </h1>
         {/* Visible byline — and the precondition for the `author` property in
             the schema above. */}
-        <Byline date={doc.meta.date} />
+        <Byline />
         <div className="prose" style={{ marginBlockStart: "2.5rem" }}>
           <MDXRemote source={doc.body} />
         </div>

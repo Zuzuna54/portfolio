@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { CONTACT } from "@/lib/site";
 import { getWriting, getWritingBySlug } from "@/lib/content";
+import { monthLabel } from "@/lib/dates";
 
 // See app/opengraph-image.tsx for why each of these files is self-contained and
 // for the Satori CSS constraints these styles are written against. Hex values
@@ -19,7 +20,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 // Per-route rather than per-slug — see the note in app/work/[slug]/opengraph-image.tsx.
-export const alt = `A production teardown by ${CONTACT.name} — one problem, one number, under two hundred words.`;
+export const alt = `A production teardown by ${CONTACT.name} — one problem, one concrete number, and the cost as well as the win.`;
 
 // Mirrors app/writing/[slug]/page.tsx so every card prerenders alongside its post.
 export function generateStaticParams() {
@@ -42,8 +43,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const { slug } = await params;
   const doc = getWritingBySlug(slug);
 
-  const n = doc ? String(doc.meta.n).padStart(2, "0") : "";
-  const eyebrow = doc ? `Writing · No. ${n}` : "Writing";
+  const eyebrow = doc ? `${doc.meta.system} · ${monthLabel(doc.meta.worked)}` : "Writing";
   const title = (doc ? doc.meta.title : "Writing").toUpperCase();
   const lead = doc
     ? doc.meta.summary

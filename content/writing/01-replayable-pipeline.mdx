@@ -2,7 +2,8 @@
 n: 1
 title: Content-hash idempotency — making an agent pipeline replayable
 date: "2026-08-14"
-shareOn: "2026-08-18"
+system: Cere Network
+worked: "2025-10"
 summary: Most LLM pipelines can't be re-run. One decision at the storage layer made ours fully replayable and turned Postgres into a disposable cache.
 ---
 
@@ -33,5 +34,5 @@ breaks; it just quietly stops holding. "Content" also only means one thing once 
 canonical serialization, or two semantically identical payloads hash differently and duplicate
 silently.
 
-Worth it. In nine months of production, "just replay it" resolved more incidents than any
+Worth it. Across seven months of production, "just replay it" resolved more incidents than any
 dashboard did.

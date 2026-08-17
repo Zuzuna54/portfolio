@@ -40,6 +40,9 @@ export function GET() {
     ? posts.map((p) => stamp(p.meta.date)).sort().at(-1)!
     : now.toISOString();
 
+  // `getWriting()` already returns newest work first, which is what aggregators
+  // expect. It used to sort ascending by series number, so the feed arrived
+  // oldest-first with non-monotonic timestamps — readers show that as a jumble.
   const entries = posts
     .map((p) => {
       const url = `${SITE_URL}/writing/${p.meta.slug}`;

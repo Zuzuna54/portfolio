@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getWriting } from "@/lib/content";
+import { monthLabel } from "@/lib/dates";
 import Scramble from "@/components/motion/Scramble";
 
 // Counted, not written down — and no longer claiming "under two hundred words",
@@ -27,7 +28,6 @@ export function generateMetadata(): Metadata {
 
 export default function WritingIndex() {
   const posts = getWriting();
-  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <main id="main">
@@ -35,39 +35,30 @@ export default function WritingIndex() {
         <p className="eyebrow">Notes on production systems</p>
         <h1 className="h1">Writing</h1>
         <p className="lead" style={{ marginBlockStart: "1.25rem" }}>
-          A numbered series of teardowns, engineer to engineer. Lead with the problem, one concrete
-          number, name the cost as well as the win. All {posts.length} are written and readable
-          here; the dates are when each goes out on LinkedIn.
+          Teardowns of systems I built, engineer to engineer. Each one leads with the problem, gives
+          one concrete number, and names the cost as well as the win. Dated by when the work
+          happened, newest first.
         </p>
       </section>
 
       <section className="shell section" style={{ paddingBlockStart: 0 }}>
         <ul className="post-list" role="list">
-          {posts.map((p) => {
-            // "Scheduled" now means *not yet posted to LinkedIn*, not
-            // "not yet published here" — every post has been readable since it
-            // was written. `date` is the real publish date; `shareOn` is the
-            // editorial queue.
-            const upcoming = !!p.meta.shareOn && p.meta.shareOn > today;
-            return (
-              <li key={p.meta.slug}>
-                <Link href={`/writing/${p.meta.slug}`} className="post-row">
-                  <span className="post-row__date mono">
-                    <span className="post-row__n">{String(p.meta.n).padStart(2, "0")}</span>
-                    <time dateTime={p.meta.date}>
-                      {new Date(p.meta.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </time>
-                    {upcoming && <span className="post-row__pill">scheduled</span>}
-                  </span>
-                  <Scramble as="span" className="post-row__title h3">{p.meta.title}</Scramble>
-                  <span className="post-row__summary">{p.meta.summary}</span>
-                </Link>
-              </li>
-            );
-          })}
+          {posts.map((p) => (
+            <li key={p.meta.slug}>
+              <Link href={`/writing/${p.meta.slug}`} className="post-row">
+                {/* The system and the month it was built — what a reader
+                    actually wants to know, and honest in a way a backdated
+                    publish date would not be. The real publish date stays in
+                    `datePublished` and the sitemap; it is not this. */}
+                <span className="post-row__when mono">
+                  <span className="post-row__system">{p.meta.system}</span>
+                  <span className="post-row__worked">{monthLabel(p.meta.worked)}</span>
+                </span>
+                <Scramble as="span" className="post-row__title h3">{p.meta.title}</Scramble>
+                <span className="post-row__summary">{p.meta.summary}</span>
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
     </main>

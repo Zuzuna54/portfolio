@@ -108,7 +108,9 @@
   color: var(--ink);
 
   @include mx.from('md') {
-    grid-template-columns: 9rem 1fr;
+    // 11rem, not 9: the meta column now holds a system name rather than "Aug 14",
+    // and "Builders Studio" wrapped to two lines at the old width.
+    grid-template-columns: 11rem 1fr;
     column-gap: 2rem;
     align-items: baseline;
   }
@@ -126,6 +128,16 @@
     font-size: var(--fs-small);
     max-width: 62ch;
     @include mx.from('md') { grid-column: 2; }
+  }
+
+  // The meta column spans both rows so its height can't push the summary away
+  // from its own title. Without this a two-line system name made the first grid
+  // row two lines tall and opened a gap under every heading.
+  @include mx.from('md') {
+    .post-row__when {
+      grid-row: 1 / span 2;
+      font-size: var(--fs-micro);
+    }
   }
 }
 
@@ -255,26 +267,28 @@
   &:hover { color: var(--gold); border-block-end-color: var(--gold); }
 }
 
-// Series number + scheduled date in the writing index.
-.post-row__date {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+// The system and the month it was built, in the writing index.
+//
+// This replaced a zero-padded queue number and a violet "SCHEDULED" pill. All
+// sixteen `shareOn` dates were in the future, so the pill painted on every row —
+// sixteen identical rows dated "Aug 14", which is a content calendar with a
+// public URL, not a blog. What a reader wants from that column is which system
+// the post is about and when it was built.
+.post-row__when {
+  display: grid;
+  gap: 0.15rem;
+  align-content: start;
 }
 
-.post-row__n {
+.post-row__system {
   color: var(--gold);
-  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-.post-row__pill {
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
-  padding: 0.1rem 0.4rem;
-  color: var(--violet);
-  border: var(--hairline) solid var(--violet);
-  text-transform: uppercase;
+.post-row__worked {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
 }
 
 // ---------------------------------------------------------------- timeline

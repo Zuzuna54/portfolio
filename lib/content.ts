@@ -3,9 +3,8 @@ import path from "node:path";
 import matter from "gray-matter";
 
 // Prose lives in content/**/*.mdx rather than inline in components for one
-// specific reason: the confidentiality gate (scripts/redact-check.sh in the
-// presence-control repo) scans a directory. Keeping every published sentence
-// under one tree means the gate can't miss a file.
+// specific reason: the confidentiality gate scans a directory. Keeping every
+// published sentence under one tree means the gate can't miss a file.
 const ROOT = path.join(process.cwd(), "content");
 
 export type Metric = { value: string; label: string };
@@ -34,14 +33,27 @@ export type WritingMeta = {
   n: number;
   title: string;
   /**
-   * When the post was published *here*. This is the date search engines see, so
-   * it has to be a date that has actually happened — all 16 previously carried
-   * their LinkedIn send date, which ran two months into the future. Google
-   * discards a `lastmod` it considers untrustworthy, and a future one qualifies.
+   * When the post was published *here*. Machine-readable only: it feeds
+   * `datePublished`, the sitemap's `lastmod` and the feed's `updated`, and is
+   * never rendered.
+   *
+   * It has to be a date that has actually happened. All 16 once carried their
+   * LinkedIn send date, which ran two months into the future — Google discards a
+   * `lastmod` it considers untrustworthy, and a future one qualifies.
    */
   date: string;
-  /** When it goes out on LinkedIn. Editorial schedule, never a publish date. */
-  shareOn?: string;
+  /**
+   * The system the post is about, and the month that work happened. This is the
+   * date a *reader* sees, because it is the one they actually want: when the
+   * thing was built, not when it was written up.
+   *
+   * It is also the sort key. `n` alternates employers for variety, so sorting by
+   * it while displaying work months sawtooths down the page — Oct 2025, Jun 2026,
+   * Sep 2025 — which is how you can tell an index was ordered by something other
+   * than what it displays.
+   */
+  system: string;
+  worked: string;
   summary: string;
 };
 
@@ -72,15 +84,23 @@ export function getWorkBySlug(slug: string): Doc<WorkMeta> | undefined {
   return getWork().find((d) => d.meta.slug === slug);
 }
 
+/**
+ * Newest work first — the blog convention, and the only order that matches what
+ * the rows display.
+ *
+ * This used to sort ascending by `n`, on the theory that it was a series where
+ * post 1 sets up post 3. It isn't: there are zero cross-references between the
+ * sixteen posts, and `n` actually alternates employers for variety, so it
+ * interleaves 2025 and 2026 work. `n` survives only as a stable tiebreak for
+ * posts written in the same month.
+ */
 export function getWriting(): Doc<WritingMeta>[] {
-  // Ascending: this is a numbered series that builds, not a reverse-chronological
-  // feed. Post 1 sets up the idea post 3 pays off.
   return readDir("writing")
     .map(({ slug, raw }) => {
       const { data, content } = matter(raw);
       return { meta: { ...(data as Omit<WritingMeta, "slug">), slug }, body: content };
     })
-    .sort((a, b) => a.meta.n - b.meta.n);
+    .sort((a, b) => b.meta.worked.localeCompare(a.meta.worked) || b.meta.n - a.meta.n);
 }
 
 export function getWritingBySlug(slug: string): Doc<WritingMeta> | undefined {

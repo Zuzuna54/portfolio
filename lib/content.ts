@@ -158,8 +158,12 @@ export const projects: Project[] = [
     repo: "Zuzuna54/Topic-Modelling",
     language: "TypeScript",
     topics: ["multi-agent", "social-graph"],
+    // Was "relationship intelligence and LLM-driven topic modelling", which the
+    // public repo does not support: every agent in it is a `Mock*` class doing
+    // keyword matching, with embeddings from `Math.random()`. No LLM calls, no
+    // Postgres. The architecture is the real artifact here, so say that.
     blurb:
-      "Real-time chat analysis into a social graph with relationship intelligence and LLM-driven topic modelling.",
+      "The fan-out/merge architecture for a ten-agent chat pipeline — stateless agents in parallel, one writer into a social graph. Agents stubbed; the topology is the point.",
   },
   {
     name: "inspector-hook",

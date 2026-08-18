@@ -17,7 +17,7 @@ const RECURSIVE = readFileSync(join(process.cwd(), "public", "recursive-700.ttf"
 
 // Kept in step with the `metadata` export in app/about/page.tsx.
 const LEAD =
-  "Nine years of production engineering — legal-AI document pipelines, ML platform tooling in biotech, founding-engineer work through SOC 2 Type 2, and embedded systems.";
+  "Nine years of production engineering, and the harnesses I build around AI coding tools so that an agent has to prove a feature works, not just report it.";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
